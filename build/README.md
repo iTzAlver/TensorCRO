@@ -1,6 +1,8 @@
 # TensorCRO: A Tensorflow-based implementation of the Coral Reef Optimization algorithm.
 
-![Logo](../multimedia/logo.png)
+<p align="center">
+    <img src="https://github.com/iTzAlver/TensorCRO/blob/master/multimedia/logo.png" width="400px">
+</p>
 
 <p align="center">
     <a href="https://github.com/iTzAlver/tensorcro/blob/main/LICENSE">
