@@ -1,0 +1,16 @@
+{
+  "names": [
+    "UniformCrossover",
+    "GaussianCrossover",
+    "MultipointCrossover",
+    "HarmonySearch",
+    "RandomSearch",
+    "ComposedSubstrate",
+    "MaskedCrossover",
+    "BLXAlphaCrossover",
+    "DifferentialSearch",
+    "RandomSearch"
+  ],
+  "shards": 1,
+  "seed": 0
+}
