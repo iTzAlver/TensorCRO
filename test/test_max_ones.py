@@ -22,6 +22,7 @@ def fitness_function(individuals: tf.RaggedTensor):
 
 
 def main() -> None:
+    od = [(0, 0, 0, 0.5, 0), (1, 1, 1, 1, 0.5)]
     directives = tf.convert_to_tensor([(0, 0, 0, 0.5, 0), (1, 1, 1, 1, 0.5)], dtype_hint=tf.float32)
     reef_shape = (10, 20)
 
@@ -45,7 +46,7 @@ def main() -> None:
     test_utils(directives, subs)
     t_cro = TensorCro(reef_shape, subs=subs)
     tik = time.perf_counter()
-    t_cro.fit(fitness_function, directives, max_iter=10, device='/CPU:0', seed=0, shards=1)
+    t_cro.fit(fitness_function, od, max_iter=10, device='/CPU:0', seed=0, shards=1)
     tok = time.perf_counter()
     t_cro.fit(fitness_function, directives, max_iter=10, device='/GPU:0', seed=0, shards=1)
     tak = time.perf_counter()

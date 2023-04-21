@@ -71,12 +71,9 @@ class TensorCro:
             self._substrate_segmentation = tf.constant(self._reef_shape[1] // len(subs), dtype=tf.int32)
             self._number_of_reefs = tf.constant(len(subs), dtype=tf.int32)
         # Save utils:
-        self.n_fit = 0
-        if os.path.exists(__replay_path__):
-            shutil.rmtree(__replay_path__)
-        os.mkdir(__replay_path__)
         self.shards = None
         self.seed = None
+        self.n_fit = None
 
     def fit(self, fitness_function: tf.function, individual_directives: tf.Tensor, max_iter: int = 100,
             device: str = '/GPU:0', seed: int = None, init=None, shards=None) \
@@ -94,15 +91,26 @@ class TensorCro:
         :param shards: number of shards to use for the computation.
         :return: the best solution found.
         """
+        # Formatting directives:
+        if not isinstance(individual_directives, tf.Tensor):
+            individual_directives = tf.convert_to_tensor(individual_directives, dtype=tf.float32)
+        # Clearing save buffer:
+        if os.path.exists(__replay_path__):
+            shutil.rmtree(__replay_path__)
+        os.mkdir(__replay_path__)
+        # Set up the seed:
         if seed is None:
             seed = tf.random.uniform((1,), minval=0, maxval=2147483647, dtype=tf.int32)
         self.seed = int(seed)
         tf.random.set_seed(self.seed)
+        # Set up shards and initial population:
+        if shards is None:
+            shards = max_iter
+        self.shards = shards
+        rf = init
+        self.n_fit = 0
+        # Using the selected device:
         with tf.device(device):
-            if shards is None:
-                shards = max_iter
-            self.shards = shards
-            rf = init
             for _ in range(max_iter // shards):
                 rf = self._fit(fitness_function, individual_directives, shards, rf)
                 reef, fitness = rf
@@ -111,8 +119,7 @@ class TensorCro:
                                     tf.argsort(tf.reshape(fitness, (-1,)), direction='DESCENDING'))
             return sorted_reef
 
-    @tf.function
-    def _fit(self, fitness_function: tf.function, individual_directives, max_iter: int = 20, init=None) \
+    def _fit(self, fitness_function: tf.function, individual_directives, max_iter: int = 100, init=None) \
             -> tuple[tf.Tensor, tf.Tensor]:
         # Precompute some useful parameters:
         __number_of_parameters = tf.shape(individual_directives)[-1]  # Number of parameters for each coral.
@@ -277,7 +284,7 @@ class TensorCro:
     @staticmethod
     def watch_replay(path: str = __replay_path__, lock: bool = False, mp: bool = True):
         """
-        This function is used to watch a replay.
+        This function is used to watch a replay in the GUI.
         :param path: A string with the path to the replay.
         :param lock: A boolean that indicates if the function should wait for the replay to finish.
         :param mp: A boolean that indicates if the function should run in a separate process.

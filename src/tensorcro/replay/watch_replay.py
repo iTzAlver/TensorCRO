@@ -82,7 +82,7 @@ class ReplayGUI:
         names = self.names['names']
         shards = self.names['shards']
         self.label.destroy()
-        self.label = tk.Label(self.master, text=f"Epoch {shards * self.index + 1} / {shards * len(self.fitness)}",
+        self.label = tk.Label(self.master, text=f"Epoch {shards * (self.index + 1)} / {shards * len(self.fitness)}",
                               font=("Arial", 20))
         self.label.place(x=240, y=10)
         padding = reef.shape[1] // len(names)

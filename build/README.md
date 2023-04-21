@@ -60,7 +60,7 @@ Harmony Search and Random Search.
 an interactive GUI.
 7. Jupyter Notebook: The framework includes a Jupyter Notebook with example of use for the Max-Ones-From-Zeros problem.
 
-### 1.1.0
+### 1.1.2
 1. Progress bar: The framework now also includes a progress bar to monitor the training process.
 
 ## Install
