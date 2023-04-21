@@ -38,6 +38,8 @@ class HarmonySearch(CROSubstrate):
         :param pa_r: The Pitch Adjustment rate (PAR).
         :param bandwidth: The band-width (BW).
         """
+        if not isinstance(directives, tf.Tensor):
+            directives = tf.convert_to_tensor(directives)
         self.hmc_r = tf.constant(hmc_r)
         self.pa_r = tf.constant(pa_r)
         self.bw = tf.constant(bandwidth) * (directives[1] - directives[0])

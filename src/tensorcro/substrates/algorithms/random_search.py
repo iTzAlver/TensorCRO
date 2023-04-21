@@ -20,6 +20,8 @@ class RandomSearch(CROSubstrate):
         :param size: Size of the new population (float or int). If float, it is the percentage of the original
         population and if int, it is the number of new individuals.
         """
+        if not isinstance(directives, tf.Tensor):
+            directives = tf.convert_to_tensor(directives)
         self.size = size
         self.params = directives.shape[-1]
         self.min = directives[0]

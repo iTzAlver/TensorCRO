@@ -28,6 +28,8 @@ class DifferentialSearch(CROSubstrate):
         :param crossover_probability: Crossover probability of the algorithm (CR).
         :param band_width: Band-width of the algorithm (F).
         """
+        if not isinstance(directives, tf.Tensor):
+            directives = tf.convert_to_tensor(directives)
         self.cr = tf.constant(crossover_probability)
         self.bw = tf.constant(band_width) * (directives[1] - directives[0])
 

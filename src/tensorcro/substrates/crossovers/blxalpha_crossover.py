@@ -21,6 +21,8 @@ class BLXAlphaCrossover(CROSubstrate):
         :param directives: Specifications of the parameters.
         :param scale: Scale of the alpha value.
         """
+        if not isinstance(directives, tf.Tensor):
+            directives = tf.convert_to_tensor(directives)
         self.mins = directives[0] * scale
         self.maxs = directives[1] * scale
 

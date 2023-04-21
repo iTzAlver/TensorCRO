@@ -14,7 +14,7 @@
     <a href="https://github.com/iTzAlver/TensorCRO/tree/master/multimedia/notebooks">
         <img src="https://img.shields.io/badge/doc-notebook-green?color=orange&style=plastic" /></a>
     <a href="https://github.com/iTzAlver/TensorCRO/releases/tag/TensorCRO-1.2.0">
-        <img src="https://img.shields.io/badge/release-1.2.0-white?color=white&style=plastic" /></a>
+        <img src="https://img.shields.io/badge/release-1.2.1-white?color=white&style=plastic" /></a>
 </p>
 
 <p align="center">
@@ -66,6 +66,10 @@ an interactive GUI.
 1. Progress bar: The framework now also includes a progress bar to monitor the training process.
 2. Minor bug fixing.
 3. Jupyter Notebook: The framework includes a Jupyter Notebook with example of use for the Max-Ones-From-Zeros problem.
+
+### 1.2.1
+1. Major bug fixing.
+2. Auto-format of parameter specs.
 
 ## Install
 
