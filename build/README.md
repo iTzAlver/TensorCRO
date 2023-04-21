@@ -13,7 +13,7 @@
         <img src="https://img.shields.io/badge/requirements-python3.8-red?color=blue&style=plastic" /></a>
     <a href="https://github.com/iTzAlver/TensorCRO/tree/master/multimedia/notebooks">
         <img src="https://img.shields.io/badge/doc-notebook-green?color=orange&style=plastic" /></a>
-    <a href="https://github.com/iTzAlver/TensorCRO/releases/tag/TensorCRO-1.2.0">
+    <a href="https://github.com/iTzAlver/TensorCRO/releases/tag/TensorCRO-1.2.1">
         <img src="https://img.shields.io/badge/release-1.2.1-white?color=white&style=plastic" /></a>
 </p>
 
