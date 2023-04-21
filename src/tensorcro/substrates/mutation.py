@@ -11,7 +11,6 @@ FUNC = {
     'gaussian': tf.random.normal,
     'truncated_normal': tf.random.truncated_normal,
     'poisson': tf.random.poisson,
-    'shuffle': tf.random.shuffle,
     'gamma': tf.random.gamma
 }
 
@@ -20,7 +19,18 @@ FUNC = {
 #                        MAIN CLASS                         #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class Mutation(CROSubstrate):
-    def __init__(self, mutation_type, **kwargs):
+    def __init__(self, mutation_type: str, **kwargs):
+        """
+        Mutation class. It is a CROSubstrate that applies a mutation to the individuals. The supported mutation types
+        are:
+            - uniform (uniform): tf.random.uniform
+            - gaussian (normal): tf.random.normal
+            - truncated_normal (truncated normal): tf.random.truncated_normal
+            - poisson (poisson): tf.random.poisson
+            - gamma (gamma): tf.random.gamma
+        :param mutation_type: Mutation type as a string.
+        :param kwargs: Arguments for the mutation function.
+        """
         if mutation_type not in FUNC:
             raise ValueError(f"TensorCRO:Mutation: Mutation type {mutation_type} not supported."
                              f"\nSupported types: {list(FUNC.keys())}")

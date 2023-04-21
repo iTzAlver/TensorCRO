@@ -13,6 +13,12 @@ from ..substrate import CROSubstrate
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class MaskedCrossover(CROSubstrate):
     def __init__(self, mask: list[int]):
+        """
+        The MaskedCrossover method implements a mask for the crossover method. The mask is a list of 0s and 1s, where
+        0s indicate that the corresponding gene will be taken from the father, and 1s indicate that the corresponding
+        gene will be taken from the mother.
+        :param mask: Mask for the crossover method.
+        """
         self.mask = tf.convert_to_tensor(mask)
 
     def _call(self, individuals: tf.Tensor):

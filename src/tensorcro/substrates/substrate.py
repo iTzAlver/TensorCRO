@@ -25,6 +25,12 @@ class CROSubstrate:
 
 class ComposedSubstrate(CROSubstrate):
     def __init__(self, *subs, name: str = 'ComposedSubstrate'):
+        """
+        The ComposedSubstrate method implements the CRO substrates as a composition of other substrates,
+        in sequential order. The output of each substrate is the input of the next one.
+        :param subs: Substrates to be composed.
+        :param name: Name of the composed substrate.
+        """
         self.subs = subs
         self.__name__ = name
 

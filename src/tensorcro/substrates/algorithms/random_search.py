@@ -13,6 +13,13 @@ from ..substrate import CROSubstrate
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class RandomSearch(CROSubstrate):
     def __init__(self, directives: tf.Tensor, size: float = .5):
+        """
+        This class implements the Random Search algorithm. It is a simple algorithm that generates random individuals
+        within the search space.
+        :param directives: Parameter specifications.
+        :param size: Size of the new population (float or int). If float, it is the percentage of the original
+        population and if int, it is the number of new individuals.
+        """
         self.size = size
         self.params = directives.shape[-1]
         self.min = directives[0]

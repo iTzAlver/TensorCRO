@@ -13,6 +13,13 @@ from ..substrate import CROSubstrate
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class GaussianCrossover(CROSubstrate):
     def __init__(self, mean: float = 0.75, stddev: float = 0.25):
+        """
+        The GaussianCrossover method implements a gaussian crossover. It is a selector between two parents,
+        where the probability of selecting a parent is given by a gaussian distribution. If the mean is 0.5 it is
+        equivalent to a uniform crossover.
+        :param mean: Mean of the gaussian.
+        :param stddev: Standard deviation of the gaussian.
+        """
         self.mean = tf.constant(mean)
         self.stddev = tf.constant(stddev)
 

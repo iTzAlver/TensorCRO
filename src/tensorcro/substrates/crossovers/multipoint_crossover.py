@@ -13,6 +13,13 @@ from ..substrate import CROSubstrate
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class MultipointCrossover(CROSubstrate):
     def __init__(self, points: list[int]):
+        """
+        The MultipointCrossover class implements a multipoint crossover. The points is a list of indices where
+        the points between the parents are swapped. The mask is applied to each parent, so the offspring will be
+        composed of the points of the first parent in the positions indicated by the mask, and the points of the
+        second parent in the positions not indicated by the mask.
+        :param points: List of indices where the points between the parents are swapped.
+        """
         self.points = tf.convert_to_tensor(points)
 
     def _call(self, individuals: tf.Tensor):

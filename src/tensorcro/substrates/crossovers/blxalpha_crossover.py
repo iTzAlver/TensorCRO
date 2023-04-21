@@ -12,7 +12,15 @@ from ..substrate import CROSubstrate
 #                        MAIN CLASS                         #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class BLXAlphaCrossover(CROSubstrate):
-    def __init__(self, directives, scale: float = 0.1):
+    def __init__(self, directives: tf.Tensor, scale: float = 0.1):
+        """
+        The BLXAlphaCrossover method implements the BLX-Alpha crossover method. This method is a
+        generalization of the BLX crossover method, which is a generalization of the SBX crossover
+        method. The BLX-Alpha crossover method is a linear combination of the parents, with a
+        random alpha value between 0 and 1.
+        :param directives: Specifications of the parameters.
+        :param scale: Scale of the alpha value.
+        """
         self.mins = directives[0] * scale
         self.maxs = directives[1] * scale
 
