@@ -5,14 +5,14 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/iTzAlver/tensorcro/blob/main/LICENSE">
+    <a href="https://github.com/iTzAlver/TensorCRO/blob/master/LICENSE">
         <img src="https://img.shields.io/github/license/iTzAlver/basenet_api?color=purple&style=plastic" /></a>
-    <a href="https://github.com/iTzAlver/tensorcro/blob/main/test">
-        <img src="https://img.shields.io/badge/Code coverage-100-green?color=green&style=plastic" /></a>
-    <a href="https://github.com/iTzAlver/tensorcro/blob/main/requirements.txt">
+    <a href="https://github.com/iTzAlver/TensorCRO/tree/master/test">
+        <img src="https://img.shields.io/badge/coverage-100%25-green?color=green&style=plastic" /></a>
+    <a href="https://github.com/iTzAlver/TensorCRO/blob/master/build/requirements.txt">
         <img src="https://img.shields.io/badge/requirements-python3.8-red?color=blue&style=plastic" /></a>
-    <a href="">
-        <img src="https://img.shields.io/badge/doc-unavailable-green?color=red&style=plastic" /></a>
+    <a href="https://github.com/iTzAlver/TensorCRO/tree/master/multimedia/notebooks">
+        <img src="https://img.shields.io/badge/doc-notebook-green?color=orange&style=plastic" /></a>
     <a href="">
         <img src="https://img.shields.io/badge/release-1.2.0-white?color=white&style=plastic" /></a>
 </p>
@@ -20,6 +20,8 @@
 <p align="center">
     <a href="https://www.tensorflow.org/">
         <img src="https://img.shields.io/badge/dependencies-tensorflow-red?color=orange&style=for-the-badge" /></a>
+    <a href="https://developer.nvidia.com/cuda-downloads">
+        <img src="https://img.shields.io/badge/dependencies-CUDA-red?color=green&style=for-the-badge" /></a>
 </p>
 
 # Table of contents
@@ -80,7 +82,7 @@ using Git:
 ```bash
 git clone https://github.com.iTzAlver/TensorCRO.git
 cd TensorCRO/dist/
-pip install ./tensorcro-1.0.0-py3-none-any.whl
+pip install ./tensorcro-1.2.0-py3-none-any.whl
 ```
 
 ### Requirements
@@ -90,6 +92,7 @@ pip install ./tensorcro-1.0.0-py3-none-any.whl
 * Numpy 1.18.1 or higher
 * Matplotlib 3.1.3 or higher
 * Pandas 1.0.1 or higher
+* CUDA for GPU support (optional but strongly recommended)
 
 # Usage:
 
