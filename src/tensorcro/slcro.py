@@ -130,7 +130,7 @@ class TensorCro:
                                     tf.argsort(tf.reshape(fitness, (-1,)), direction='DESCENDING'))
             return sorted_reef
 
-
+    @tf.function
     def _fit(self, fitness_function: tf.function, individual_directives, max_iter: int = 100, init=None) \
             -> tuple[tf.Tensor, tf.Tensor]:
         # Precompute some useful parameters:
