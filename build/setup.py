@@ -19,7 +19,7 @@ REQUIREMENTS = [
 
 setuptools.setup(
     name='tensorcro',
-    version='1.2.1',
+    version='1.3.0',
     author='Palomo-Alonso, Alberto',
     author_email='a.palomo@edu.uah',
     description='TensorCRO: A Tensorflow-based implementation of the Coral Reef Optimization algorithm.',

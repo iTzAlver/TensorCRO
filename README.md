@@ -14,7 +14,7 @@
     <a href="https://github.com/iTzAlver/TensorCRO/tree/master/multimedia/notebooks">
         <img src="https://img.shields.io/badge/doc-notebook-green?color=orange&style=plastic" /></a>
     <a href="https://github.com/iTzAlver/TensorCRO/releases/tag/TensorCRO-1.2.1">
-        <img src="https://img.shields.io/badge/release-1.2.1-white?color=white&style=plastic" /></a>
+        <img src="https://img.shields.io/badge/release-1.3.0-white?color=white&style=plastic" /></a>
 </p>
 
 <p align="center">
@@ -70,6 +70,12 @@ an interactive GUI.
 ### 1.2.1
 1. Major bug fixing.
 2. Auto-format of parameter specs.
+
+### 1.3.0
+1. Major bug fixing.
+2. Now the fitness function can be a non-compilable function.
+3. Now you can watch the training process while running.
+4. The initialization of the reef now only take alive corals as inputs. (Major bug)
 
 ## Install
 

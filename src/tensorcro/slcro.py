@@ -10,8 +10,11 @@ import os
 import json
 import tensorflow as tf
 import numpy as np
+from typing import Callable
+from tensorflow.python.eager.polymorphic_function.polymorphic_function import Function as TensorFlowFunction
 from .__special__ import __replay_path__
 from .replay import watch_replay
+
 TF_INF = tf.constant(-np.inf, dtype=tf.float32)
 
 
@@ -75,8 +78,8 @@ class TensorCro:
         self.seed = None
         self.n_fit = None
 
-    def fit(self, fitness_function: tf.function, individual_directives: tf.Tensor, max_iter: int = 100,
-            device: str = '/GPU:0', seed: int = None, init=None, shards=None) \
+    def fit(self, fitness_function: (TensorFlowFunction, Callable), individual_directives: tf.Tensor,
+            max_iter: int = 100, device: str = '/GPU:0', seed: int = None, init=None, shards=None, monitor=False) \
             -> tf.Tensor:
         """
         This function is the main loop of the algorithm. It will run the algorithm until the maximum number of
@@ -89,6 +92,7 @@ class TensorCro:
         :param seed: seed for the random number generator.
         :param init: initial population and fitness to use as a tuple.
         :param shards: number of shards to use for the computation.
+        :param monitor: boolean to tell if the algorithm should track the progress.
         :return: the best solution found.
         """
         # Formatting directives:
@@ -109,15 +113,23 @@ class TensorCro:
         self.shards = shards
         rf = init
         self.n_fit = 0
+        # Checkout fitness.
+        if not isinstance(fitness_function, TensorFlowFunction):
+            _fitness_function = _function_cast_(fitness_function)
+        else:
+            _fitness_function = fitness_function
         # Using the selected device:
         with tf.device(device):
             for _ in range(max_iter // shards):
-                rf = self._fit(fitness_function, individual_directives, shards, rf)
+                rf = self._fit(_fitness_function, individual_directives, shards, rf)
                 reef, fitness = rf
                 self.__save_replay(reef, fitness)
+                if monitor:
+                    self.watch_replay()
             sorted_reef = tf.gather(tf.reshape(reef, (-1, tf.shape(individual_directives)[-1])),
                                     tf.argsort(tf.reshape(fitness, (-1,)), direction='DESCENDING'))
             return sorted_reef
+
 
     def _fit(self, fitness_function: tf.function, individual_directives, max_iter: int = 100, init=None) \
             -> tuple[tf.Tensor, tf.Tensor]:
@@ -142,10 +154,16 @@ class TensorCro:
             __ = tf.concat([tf.ones(self._n_init, dtype=tf.bool),
                             tf.zeros(__original_reef_shape[0] * __original_reef_shape[1] - self._n_init,
                                      dtype=tf.bool)], axis=0)
-            __ = tf.reshape(tf.random.shuffle(__), __original_reef_shape[:-1])
-            ____to_fitness = tf.reshape(reef, __original_reef_shape)
-            __ = tf.where(__, fitness_function(____to_fitness), TF_INF)
-            fitness = tf.expand_dims(tf.reshape(__, __reef_shape[:-1]), -1)
+            __ = tf.reshape(tf.random.shuffle(__), __reef_shape[:-1])
+            _selected_grid = tf.boolean_mask(reef, __)
+            _selected_fitness = tf.cast(fitness_function(_selected_grid), tf.float32)
+            _full_fitness = tf.ones(__reef_shape[:-1], dtype=tf.float32) * TF_INF
+            fitness = tf.tensor_scatter_nd_update(_full_fitness, tf.where(__), _selected_fitness)
+            fitness = tf.expand_dims(fitness, -1)
+            #   [!] Version 1 - Evaluating all the reef - Deprecated:
+            # ____to_fitness = tf.reshape(reef, (-1, __number_of_parameters))
+            # __ = tf.where(__, tf.reshape(fitness_function(____to_fitness), __original_reef_shape[:-1]), TF_INF)
+            # fitness = tf.expand_dims(tf.reshape(__, __reef_shape[:-1]), -1)
         else:
             reef = tf.reshape(init[0], __reef_shape)
             fitness = tf.expand_dims(tf.reshape(init[1], __reef_shape[:-1]), -1)
@@ -188,7 +206,7 @@ class TensorCro:
             # 4.- Evaluation:
             larvae = tf.concat([larvae_spawners, larvae_brooders, larvae_fragmentators], axis=0)
             larvae = tf.clip_by_value(larvae, individual_directives[0], individual_directives[1])
-            larvae_fitness = tf.expand_dims(fitness_function(larvae), -1)
+            larvae_fitness = tf.expand_dims(tf.cast(fitness_function(larvae), tf.float32), -1)
             first_stage_larvae = larvae[:-number_fragmentators]
             first_stage_larvae_fitness = larvae_fitness[:tf.shape(first_stage_larvae)[0]]
             second_stage_larvae = larvae[-number_fragmentators:]
@@ -223,8 +241,8 @@ class TensorCro:
             # 7.- Depredation:
             number_alive_corals = tf.reduce_sum(tf.where(tf.math.is_finite(fitness), 1, 0), axis=[1, 2, 3])
             number_depredated_corals = tf.reduce_sum(tf.cast(tf.math.round(tf.multiply(self._fd,
-                                                                           tf.cast(number_alive_corals,
-                                                                                   dtype=tf.float32))),
+                                                                                       tf.cast(number_alive_corals,
+                                                                                               dtype=tf.float32))),
                                                              dtype=tf.int32))
             predation_positions = tf.where(tf.math.is_finite(fitness))[:, :-1]
             predation_values = tf.squeeze(tf.gather_nd(fitness, predation_positions))
@@ -300,6 +318,12 @@ class TensorCro:
 
     def __repr__(self):
         return "<TensorCRO instance initialized>"
+
+
+def _function_cast_(function):
+    def casted_python_function(inputs):
+        return tf.py_function(function, inp=[inputs], Tout=tf.float32)
+    return casted_python_function
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        END OF FILE                        #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
