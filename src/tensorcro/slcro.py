@@ -78,7 +78,7 @@ class TensorCro:
         self.seed = None
         self.n_fit = None
 
-    def fit(self, fitness_function: (TensorFlowFunction, Callable), individual_directives: tf.Tensor,
+    def fit(self, fitness_function: (TensorFlowFunction, Callable), individual_directives: tf.Tensor, save: bool = True,
             max_iter: int = 100, device: str = '/GPU:0', seed: int = None, init=None, shards=None, monitor=False) \
             -> tf.Tensor:
         """
@@ -93,6 +93,7 @@ class TensorCro:
         :param init: initial population and fitness to use as a tuple.
         :param shards: number of shards to use for the computation.
         :param monitor: boolean to tell if the algorithm should track the progress.
+:par    :param save: boolean to tell if the algorithm should save the progress.
         :return: the best solution found.
         """
         # Formatting directives:
@@ -120,14 +121,18 @@ class TensorCro:
             _fitness_function = fitness_function
         # Using the selected device:
         with tf.device(device):
+            __progress_bar = tf.keras.utils.Progbar(max_iter // shards)
             for _ in range(max_iter // shards):
                 rf = self._fit(_fitness_function, individual_directives, shards, rf)
+                __progress_bar.update(_)
                 reef, fitness = rf
-                self.__save_replay(reef, fitness)
+                if save:
+                    self.__save_replay(reef, fitness)
                 if monitor:
                     self.watch_replay()
             sorted_reef = tf.gather(tf.reshape(reef, (-1, tf.shape(individual_directives)[-1])),
                                     tf.argsort(tf.reshape(fitness, (-1,)), direction='DESCENDING'))
+            __progress_bar.update(max_iter // shards)
             return sorted_reef
 
     @tf.function
@@ -157,8 +162,8 @@ class TensorCro:
             __ = tf.reshape(tf.random.shuffle(__), __reef_shape[:-1])
             _selected_grid = tf.boolean_mask(reef, __)
             _selected_fitness = tf.cast(fitness_function(_selected_grid), tf.float32)
-            _full_fitness = tf.ones(__reef_shape[:-1], dtype=tf.float32) * TF_INF
-            fitness = tf.tensor_scatter_nd_update(_full_fitness, tf.where(__), _selected_fitness)
+            _initial_fitness = tf.ones(__reef_shape[:-1], dtype=tf.float32) * TF_INF
+            fitness = tf.tensor_scatter_nd_update(_initial_fitness, tf.where(__), _selected_fitness)
             fitness = tf.expand_dims(fitness, -1)
             #   [!] Version 1 - Evaluating all the reef - Deprecated:
             # ____to_fitness = tf.reshape(reef, (-1, __number_of_parameters))
@@ -167,19 +172,17 @@ class TensorCro:
         else:
             reef = tf.reshape(init[0], __reef_shape)
             fitness = tf.expand_dims(tf.reshape(init[1], __reef_shape[:-1]), -1)
-        number_alive_corals = tf.reduce_sum(tf.where(tf.math.is_finite(fitness), 1, 0), axis=[1, 2, 3])
-        __progress_bar = tf.keras.utils.Progbar(max_iter)
+        number_alive_corals = tf.reduce_sum(tf.where(tf.math.is_finite(fitness), 1, 0), axis=[1, 2, 3])  # Per substrate
         for _ in range(max_iter):
             # Some initial computation:
-            __progress_bar.update(_)
             number_spawners = tf.cast(tf.math.round(tf.multiply(self._fb, tf.cast(number_alive_corals,
                                                                                   tf.float32))), dtype=tf.int32)
             number_brooders = tf.reduce_sum(tf.subtract(number_alive_corals, number_spawners))
-            number_fragmentators = tf.reduce_sum(tf.cast(tf.math.round(
+            number_frag = tf.reduce_sum(tf.cast(tf.math.round(
                 tf.multiply(self._fa, tf.cast(number_alive_corals, tf.float32))), dtype=tf.int32))
             alive_positions = tf.where(tf.math.is_finite(tf.squeeze(fitness)))
             alive_positions_shuffled = tf.random.shuffle(alive_positions)
-            alive_positions_shuffled_frag = tf.random.shuffle(alive_positions_shuffled)
+            alive_positions_shuffled_frag = tf.random.shuffle(alive_positions)
             alive_corals = tf.gather_nd(reef, alive_positions_shuffled)
             alive_corals_frag = tf.gather_nd(reef, alive_positions_shuffled_frag)
             # Shuffle the corals and split them into spawners, brooders and fragmentators:
@@ -201,16 +204,17 @@ class TensorCro:
             larvae_brooders = tf.add(brooders, mutation)
 
             # 3.- Fragmentation:
-            larvae_fragmentators = alive_corals_frag[:number_fragmentators]
+            frag_fitness = tf.gather_nd(fitness, alive_positions_shuffled_frag[:number_frag])
 
             # 4.- Evaluation:
-            larvae = tf.concat([larvae_spawners, larvae_brooders, larvae_fragmentators], axis=0)
+            larvae = tf.concat([larvae_spawners, larvae_brooders], axis=0)
             larvae = tf.clip_by_value(larvae, individual_directives[0], individual_directives[1])
             larvae_fitness = tf.expand_dims(tf.cast(fitness_function(larvae), tf.float32), -1)
-            first_stage_larvae = larvae[:-number_fragmentators]
-            first_stage_larvae_fitness = larvae_fitness[:tf.shape(first_stage_larvae)[0]]
-            second_stage_larvae = larvae[-number_fragmentators:]
-            second_stage_larvae_fitness = larvae_fitness[-number_fragmentators:]
+
+            first_stage_larvae = larvae
+            first_stage_larvae_fitness = larvae_fitness
+            second_stage_larvae = alive_corals_frag[:number_frag]
+            second_stage_larvae_fitness = frag_fitness
 
             # 5. - First larvae setting:
             for ___ in range(self._k):
@@ -255,20 +259,20 @@ class TensorCro:
             inf_or_not = tf.expand_dims(tf.where(_predation_bool, TF_INF, depredation_values), -1)
             fitness = tf.tensor_scatter_nd_update(fitness, depredation_positions, inf_or_not)
             number_alive_corals = tf.reduce_sum(tf.where(tf.math.is_finite(fitness), 1, 0), axis=[1, 2, 3])
-        __progress_bar.update(max_iter)
-        return tf.reshape(reef, __original_reef_shape), tf.reshape(fitness, self._reef_shape)
+        __return_value = tf.reshape(reef, __original_reef_shape), tf.reshape(fitness, self._reef_shape)
+        return __return_value
 
     @staticmethod
-    def _substrates(substrates, reefs):
+    def _substrates(substrates, spawners):
         """
         This function is used to perform the substrate crossover operation. It is called by the _crossover function.
         :param substrates: A list of functions that perform the substrate crossover operation.
-        :param reefs: A list of reefs to perform the crossover operation on.
+        :param spawners: A list of reefs to perform the crossover operation on.
         :return: A tensor with the result of the crossover operation.
         """
         crossover = list()
-        for substrate, reef in zip(substrates, reefs):
-            crossover.append(substrate(reef))
+        for substrate, spawner in zip(substrates, spawners):
+            crossover.append(substrate(spawner))
         return tf.concat(crossover, axis=0)
 
     def __save_replay(self, reef, fitness):

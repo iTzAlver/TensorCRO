@@ -16,6 +16,7 @@ from src.tensorcro.substrates.substrate import CROSubstrate
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        FUNCTION DEF                       #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
+@tf.function
 def fitness_function(individuals: tf.RaggedTensor):
     __retval = tf.reduce_sum(individuals, axis=-1)
     return __retval

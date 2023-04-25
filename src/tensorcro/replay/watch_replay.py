@@ -78,7 +78,7 @@ class ReplayGUI:
         self.list_fitness()
 
     def render(self):
-        reef = self.fitness[self.index]
+        reef = self.fitness[self.index] / np.max(self.fitness[self.index])
         names = self.names['names']
         shards = self.names['shards']
         self.label.destroy()
@@ -94,7 +94,7 @@ class ReplayGUI:
         _y = np.arange(reef.shape[1])
         _xx, _yy = np.meshgrid(_x, _y)
         x, y = _xx.ravel(), _yy.ravel()
-        top = np.where(reef < 0, 0, np.exp(reef)).ravel()
+        top = np.where(reef < 0, 0, reef ** 10).ravel()
         bottom = np.zeros_like(top)
         ax.bar3d(x, y, bottom, 2, 1, top, shade=True, alpha=0.5, linewidth=3., linestyle='-',
                  color=np.reshape(kol, (-1, 4)))
@@ -124,7 +124,7 @@ class ReplayGUI:
         plt.close(fig)
 
     def list_fitness(self):
-        flat_reef = self.reef[self.index].reshape(-1, self.reef[self.index].shape[-1])
+        flat_reef = self.reef[self.index].reshape(-1, self.reef[self.index].shape[-1])[:, :100]
         flat_fitness = self.fitness[self.index].flatten()
         # Sort by fitness
         sorted_fitness = np.argsort(flat_fitness)[::-1]
