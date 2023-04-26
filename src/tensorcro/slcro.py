@@ -44,7 +44,6 @@ class TensorCro:
         coral is located. The algorithm will evolve the population in a similar way to the genetic algorithm.
         The algorithm will use the fitness function to evaluate the solutions and will evolve the population using
         the fitness function.
-
         :param reef_shape: Coral shape, telling the maximum number of individuals in the reef. As a tuple of two int.
         :param rho: Percentage of initial occupation of the reef, bounded between 0 and 1.
         :param fb: Ratio of current corals that act as spawners, bounded between 0 and 1.
@@ -93,7 +92,7 @@ class TensorCro:
         :param init: initial population and fitness to use as a tuple.
         :param shards: number of shards to use for the computation.
         :param monitor: boolean to tell if the algorithm should track the progress.
-:par    :param save: boolean to tell if the algorithm should save the progress.
+        :param save: boolean to tell if the algorithm should save the progress.
         :return: the best solution found.
         """
         # Formatting directives:
@@ -172,9 +171,10 @@ class TensorCro:
         else:
             reef = tf.reshape(init[0], __reef_shape)
             fitness = tf.expand_dims(tf.reshape(init[1], __reef_shape[:-1]), -1)
-        number_alive_corals = tf.reduce_sum(tf.where(tf.math.is_finite(fitness), 1, 0), axis=[1, 2, 3])  # Per substrate
         for _ in range(max_iter):
             # Some initial computation:
+            number_alive_corals = tf.reduce_sum(tf.where(tf.math.is_finite(fitness), 1, 0),
+                                                axis=[1, 2, 3])  # Per substrate
             number_spawners = tf.cast(tf.math.round(tf.multiply(self._fb, tf.cast(number_alive_corals,
                                                                                   tf.float32))), dtype=tf.int32)
             number_brooders = tf.reduce_sum(tf.subtract(number_alive_corals, number_spawners))
@@ -216,49 +216,37 @@ class TensorCro:
             second_stage_larvae = alive_corals_frag[:number_frag]
             second_stage_larvae_fitness = frag_fitness
 
-            # 5. - First larvae setting:
-            for ___ in range(self._k):
-                positions_larvae = tf.random.shuffle(tf.reshape(tf.stack(
-                    tf.meshgrid(tf.range(__reef_shape[0]), tf.range(__reef_shape[1]), tf.range(__reef_shape[2])),
-                    axis=-1), (-1, 3)))[:tf.shape(first_stage_larvae)[0]]
-                positioned_fitness = tf.gather_nd(fitness, positions_larvae)
-                positioned_reef = tf.gather_nd(reef, positions_larvae)
-                larvae_wins = tf.greater(first_stage_larvae_fitness, positioned_fitness)
-                new_fitness = tf.where(larvae_wins, first_stage_larvae_fitness, positioned_fitness)
-                fitness = tf.tensor_scatter_nd_update(fitness, positions_larvae, new_fitness)
-                new_reef = tf.where(larvae_wins, first_stage_larvae, positioned_reef)
-                reef = tf.tensor_scatter_nd_update(reef, positions_larvae, new_reef)
-                first_stage_larvae_fitness = tf.where(larvae_wins, TF_INF, first_stage_larvae_fitness)
-            # 6.- Second larvae setting:
-            for ___ in range(self._k):
-                positions_larvae = tf.random.shuffle(tf.reshape(tf.stack(
-                    tf.meshgrid(tf.range(__reef_shape[0]), tf.range(__reef_shape[1]), tf.range(__reef_shape[2])),
-                    axis=-1), (-1, 3)))[:tf.shape(second_stage_larvae)[0]]
-                positioned_fitness = tf.gather_nd(fitness, positions_larvae)
-                positioned_reef = tf.gather_nd(reef, positions_larvae)
-                larvae_wins = tf.greater(second_stage_larvae_fitness, positioned_fitness)
-                new_fitness = tf.where(larvae_wins, second_stage_larvae_fitness, positioned_fitness)
-                fitness = tf.tensor_scatter_nd_update(fitness, positions_larvae, new_fitness)
-                new_reef = tf.where(larvae_wins, second_stage_larvae, positioned_reef)
-                reef = tf.tensor_scatter_nd_update(reef, positions_larvae, new_reef)
-                second_stage_larvae_fitness = tf.where(larvae_wins, TF_INF, second_stage_larvae_fitness)
+            # 5. - First and second larvae setting:
+            for stage, stage_fitness in [(first_stage_larvae, first_stage_larvae_fitness),
+                                         (second_stage_larvae, second_stage_larvae_fitness)]:
+                for ___ in range(self._k):
+                    positions_larvae = tf.random.shuffle(tf.reshape(tf.stack(
+                        tf.meshgrid(tf.range(__reef_shape[0]), tf.range(__reef_shape[1]), tf.range(__reef_shape[2])),
+                        axis=-1), (-1, 3)))[:tf.shape(stage)[0]]
+                    positioned_fitness = tf.gather_nd(fitness, positions_larvae)
+                    positioned_reef = tf.gather_nd(reef, positions_larvae)
+                    larvae_wins = tf.greater(stage_fitness, positioned_fitness)
+                    new_fitness = tf.where(larvae_wins, stage_fitness, positioned_fitness)
+                    fitness = tf.tensor_scatter_nd_update(fitness, positions_larvae, new_fitness)
+                    new_reef = tf.where(larvae_wins, stage, positioned_reef)
+                    reef = tf.tensor_scatter_nd_update(reef, positions_larvae, new_reef)
+                    stage_fitness = tf.where(larvae_wins, TF_INF, stage_fitness)
             # 7.- Depredation:
             number_alive_corals = tf.reduce_sum(tf.where(tf.math.is_finite(fitness), 1, 0), axis=[1, 2, 3])
             number_depredated_corals = tf.reduce_sum(tf.cast(tf.math.round(tf.multiply(self._fd,
                                                                                        tf.cast(number_alive_corals,
                                                                                                dtype=tf.float32))),
                                                              dtype=tf.int32))
-            predation_positions = tf.where(tf.math.is_finite(fitness))[:, :-1]
-            predation_values = tf.squeeze(tf.gather_nd(fitness, predation_positions))
-            predation_indices = tf.argsort(predation_values)[:number_depredated_corals]
-            depredation_values = tf.gather(predation_values, predation_indices)
-            depredation_positions = tf.gather(predation_positions, predation_indices)
+            predation_positions = tf.where(tf.math.is_finite(fitness))[:, :-1]           # Where the corals are alive.
+            predation_values = tf.squeeze(tf.gather_nd(fitness, predation_positions))    # Their fitness values.
+            predation_indices = tf.argsort(predation_values)[:number_depredated_corals]  # The indices of the predated.
+            depredation_values = tf.gather(predation_values, predation_indices)          # Their fitness values.
+            depredation_positions = tf.gather(predation_positions, predation_indices)    # Their indices.
 
             _random_tensor = tf.random.uniform(tf.shape(predation_indices), minval=0, maxval=1)
             _predation_bool = tf.math.less(_random_tensor, self._pd)
             inf_or_not = tf.expand_dims(tf.where(_predation_bool, TF_INF, depredation_values), -1)
             fitness = tf.tensor_scatter_nd_update(fitness, depredation_positions, inf_or_not)
-            number_alive_corals = tf.reduce_sum(tf.where(tf.math.is_finite(fitness), 1, 0), axis=[1, 2, 3])
         __return_value = tf.reshape(reef, __original_reef_shape), tf.reshape(fitness, self._reef_shape)
         return __return_value
 

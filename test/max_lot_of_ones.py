@@ -44,7 +44,7 @@ def main() -> None:
     best = t_cro.fit(fitness_function, directives, max_iter=200, device='/GPU:0', seed=0, shards=5, save=False)[0]
     tak = time.perf_counter()
     print(f'GPU speed up over CPU: {(tok - tik) / (tak - tok)}')
-    print(f'Best individual: {best}')
+    print(f'Best individual: {best}: {fitness_function(tf.convert_to_tensor([best]))}')
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
