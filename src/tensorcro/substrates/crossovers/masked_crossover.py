@@ -12,7 +12,7 @@ from ..substrate import CROSubstrate
 #                        MAIN CLASS                         #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class MaskedCrossover(CROSubstrate):
-    def __init__(self, mask: list[int]):
+    def __init__(self, mask: list):
         """
         The MaskedCrossover method implements a mask for the crossover method. The mask is a list of 0s and 1s, where
         0s indicate that the corresponding gene will be taken from the father, and 1s indicate that the corresponding

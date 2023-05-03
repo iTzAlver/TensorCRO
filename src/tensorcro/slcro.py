@@ -23,7 +23,7 @@ TF_INF = tf.constant(-np.inf, dtype=tf.float32)
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class TensorCro:
     def __init__(self,
-                 reef_shape: tuple[int, int] = (10, 10),
+                 reef_shape: tuple = (10, 10),
                  rho: float = .4,
                  fb: float = .80,
                  fd: float = .50,
@@ -135,8 +135,7 @@ class TensorCro:
             return sorted_reef
 
     @tf.function
-    def _fit(self, fitness_function: tf.function, individual_directives, max_iter: int = 100, init=None) \
-            -> tuple[tf.Tensor, tf.Tensor]:
+    def _fit(self, fitness_function: tf.function, individual_directives, max_iter: int = 100, init=None) -> tuple:
         # Precompute some useful parameters:
         __number_of_parameters = tf.shape(individual_directives)[-1]  # Number of parameters for each coral.
         __parameter_diff = tf.subtract(individual_directives[1], individual_directives[0])  # Max - Min.
