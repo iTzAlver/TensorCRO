@@ -12,7 +12,7 @@ from ..substrate import CROSubstrate
 #                        MAIN CLASS                         #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class MultipointCrossover(CROSubstrate):
-    def __init__(self, points: list[int]):
+    def __init__(self, points: list):
         """
         The MultipointCrossover class implements a multipoint crossover. The points is a list of indices where
         the points between the parents are swapped. The mask is applied to each parent, so the offspring will be
