@@ -5,7 +5,7 @@
 #                                                           #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 from .random_search import RandomSearch
-from .harmony_search import HarmonySearch
+from .harmony_search import HarmonySearch, HarmonyMutation
 from .differential_search import DifferentialSearch
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        END OF FILE                        #

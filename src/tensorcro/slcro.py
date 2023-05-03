@@ -121,6 +121,7 @@ class TensorCro:
         # Using the selected device:
         with tf.device(device):
             __progress_bar = tf.keras.utils.Progbar(max_iter // shards)
+            __p = None
             for _ in range(max_iter // shards):
                 rf = self._fit(_fitness_function, individual_directives, shards, rf)
                 __progress_bar.update(_)
@@ -128,7 +129,9 @@ class TensorCro:
                 if save:
                     self.__save_replay(reef, fitness)
                 if monitor:
-                    self.watch_replay()
+                    if __p is not None:
+                        __p.terminate()
+                    __p = self.watch_replay()
             sorted_reef = tf.gather(tf.reshape(reef, (-1, tf.shape(individual_directives)[-1])),
                                     tf.argsort(tf.reshape(fitness, (-1,)), direction='DESCENDING'))
             __progress_bar.update(max_iter // shards)
@@ -303,19 +306,21 @@ class TensorCro:
         shutil.copytree(__replay_path__, path)
 
     @staticmethod
-    def watch_replay(path: str = __replay_path__, lock: bool = False, mp: bool = True):
+    def watch_replay(path: str = __replay_path__, lock: bool = False, mp: bool = True) -> (None,
+                                                                                           multiprocessing.Process):
         """
         This function is used to watch a replay in the GUI.
         :param path: A string with the path to the replay.
         :param lock: A boolean that indicates if the function should wait for the replay to finish.
         :param mp: A boolean that indicates if the function should run in a separate process.
-        :return: A multiprocessing.Process object.
+        :return: A multiprocessing.Process object or None.
         """
         if mp:
             p = multiprocessing.Process(target=watch_replay, args=(path,))
             p.start()
             if lock:
                 p.join()
+            return p
         else:
             watch_replay(path)
 
