@@ -46,11 +46,14 @@ def main() -> None:
 
     test_utils(directives, subs)
     t_cro = TensorCro(reef_shape, subs=subs)
+    t_cro.fit(fitness_function, od, max_iter=10, device='/CPU:0', seed=0, shards=1) # Warm up
     tik = time.perf_counter()
     t_cro.fit(fitness_function, od, max_iter=10, device='/CPU:0', seed=0, shards=1)
     tok = time.perf_counter()
     t_cro.fit(fitness_function, directives, max_iter=10, device='/GPU:0', seed=0, shards=1)
     tak = time.perf_counter()
+    print(f"CPU time: {tok - tik}")
+    print(f"GPU time: {tak - tok}")
     print(f'GPU speed up over CPU: {(tok - tik) / (tak - tok)}')
     t_cro.save_replay('./replay')
     t_cro.watch_replay('./replay', mp=False)
