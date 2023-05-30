@@ -37,11 +37,17 @@ def main() -> None:
     subs = [uniform_crossover, harmony_search, random_search, genetic_algorithm]
 
     t_cro = TensorCro(reef_shape, subs=subs)
+    # Warm up.
+    t_cro.fit(fitness_function, directives, max_iter=5, device='/CPU:0', seed=0, shards=5, save=False)
+    # CPU speed.
     tik = time.perf_counter()
     t_cro.fit(fitness_function, directives, max_iter=200, device='/CPU:0', seed=0, shards=5, save=False)
     logging.warning('CPU finished')
+    # GPU speed.
     tok = time.perf_counter()
     best = t_cro.fit(fitness_function, directives, max_iter=200, device='/GPU:0', seed=0, shards=5, save=False)[0]
+    logging.warning('GPU finished')
+    # Print results.
     tak = time.perf_counter()
     print(f'GPU speed up over CPU: {(tok - tik) / (tak - tok)}')
     print(f'Best individual: {best}: {fitness_function(tf.convert_to_tensor([best]))}')
