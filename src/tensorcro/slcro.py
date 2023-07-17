@@ -81,8 +81,8 @@ class TensorCro:
 
     def fit(self, fitness_function: (TensorFlowFunction, Callable), individual_directives: tf.Tensor, save: bool = True,
             max_iter: int = 100, device: str = '/GPU:0', seed: int = None, init=None, shards=None, monitor=False,
-            time_limit: int = None, evaluation_limit: int = None) \
-            -> tf.Tensor:
+            time_limit: int = None, evaluation_limit: int = None, minimize: bool = True) \
+            -> tuple[tf.Tensor, tf.Tensor]:
         """
         This function is the main loop of the algorithm. It will run the algorithm until the maximum number of
         iterations is reached or the fitness function returns a value that is considered optimal.
@@ -98,6 +98,7 @@ class TensorCro:
         :param save: boolean to tell if the algorithm should save the progress.
         :param time_limit: Time limit for the algorithm in seconds.
         :param evaluation_limit: Number of max evaluations for the algorithm.
+        :param minimize: Boolean to tell if the algorithm should minimize or maximize the fitness function.
         :return: the best solution found.
         """
         # Formatting directives:
@@ -128,14 +129,20 @@ class TensorCro:
             tik = time.perf_counter()
         else:
             tik = 0
+        # Minimize or maximize:
+        if minimize:
+            reverse = -1
+        else:
+            reverse = 1
         # Using the selected device:
         with tf.device(device):
             __progress_bar = tf.keras.utils.Progbar(max_iter // shards)
             __p = None
             for _ in range(max_iter // shards):
-                rf = self._fit(_fitness_function, individual_directives, shards, rf)
+                rf = self._fit(_fitness_function, individual_directives, shards, rf, reverse=reverse)
                 __progress_bar.update(_)
                 reef, fitness = rf
+                fitness *= reverse
                 if save:
                     self.__save_replay(reef, fitness)
                 if monitor:
@@ -151,11 +158,13 @@ class TensorCro:
             sorted_reef = tf.gather(tf.reshape(reef, (-1, tf.shape(individual_directives)[-1])),
                                     tf.argsort(tf.reshape(fitness, (-1,)), direction='DESCENDING'))
             __progress_bar.update(max_iter // shards)
-            return sorted_reef
+            sorted_fitness = tf.gather(tf.reshape(fitness, (-1,)), tf.argsort(tf.reshape(fitness, (-1,)),
+                                                                              direction='DESCENDING'))
+            return sorted_reef, sorted_fitness
 
     @tf.function
-    def _fit(self, fitness_function: tf.function, individual_directives, max_iter: int = 100, init=None) -> tuple:
-
+    def _fit(self, fitness_function: tf.function, individual_directives, max_iter: int = 100, init=None,
+             reverse: int = 1) -> tuple:
         # Precompute some useful parameters:
         __n_parameters = tf.shape(individual_directives)[-1]
         __n_substrates = self._number_of_reefs
@@ -175,7 +184,7 @@ class TensorCro:
             # Build random reef tensor
             reef = tf.random.uniform(__reef_shape, dtype=tf.float32, name='numeric_reef')
             reef = tf.add(tf.multiply(__parameter_maxmin_diff, reef), individual_directives[0], name='numeric_reef')
-            reef = tf.clip_by_value(reef, individual_directives[0], individual_directives[1]) # Apply boundaries
+            reef = tf.clip_by_value(reef, individual_directives[0], individual_directives[1])  # Apply boundaries
 
             # Build fitness tensor
             occupied_idxs = tf.concat([tf.ones(self._n_init, dtype=tf.bool),
@@ -183,7 +192,7 @@ class TensorCro:
                                                 dtype=tf.bool)], axis=0)
             occupied_idxs = tf.reshape(tf.random.shuffle(occupied_idxs), __reef_shape[:-1])
             _occupied_cells = tf.boolean_mask(reef, occupied_idxs)
-            _occupied_fitness = tf.cast(fitness_function(_occupied_cells), tf.float32)
+            _occupied_fitness = tf.cast(reverse * fitness_function(_occupied_cells), tf.float32)
             _initial_fitness = tf.ones(__reef_shape[:-1], dtype=tf.float32) * TF_INF
             fitness = tf.tensor_scatter_nd_update(_initial_fitness, tf.where(occupied_idxs), _occupied_fitness)
             fitness = tf.expand_dims(fitness, -1)
@@ -235,7 +244,7 @@ class TensorCro:
             # 4.- Evaluation:
             larvae = tf.concat([larvae_spawners, larvae_brooders], axis=0)
             larvae = tf.clip_by_value(larvae, individual_directives[0], individual_directives[1])
-            larvae_fitness = tf.expand_dims(tf.cast(fitness_function(larvae), tf.float32), -1)
+            larvae_fitness = tf.expand_dims(tf.cast(reverse * fitness_function(larvae), tf.float32), -1)
 
             # 5. - First and second larvae setting:
             first_stage_larvae = larvae

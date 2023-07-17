@@ -13,7 +13,15 @@ import numpy as np
 #                        MAIN CLASS                         #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class GeneticAlgorithm:
-    def __init__(self, individuals, mutation_rate, crossover_rate, mutation_variance):
+    def __init__(self, individuals, mutation_rate: float = 0.33, crossover_rate: float = 0.5,
+                 mutation_variance: float = 0.05):
+        """
+        This class implements the Genetic Algorithm.
+        :param individuals: The number of individuals in the population.
+        :param mutation_rate: The mutation rate.
+        :param crossover_rate: The crossover rate.
+        :param mutation_variance: The variance of the mutation.
+        """
         self.individuals = individuals
         self.mutation_rate = mutation_rate
         self.crossover_rate = crossover_rate

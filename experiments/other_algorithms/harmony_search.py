@@ -13,7 +13,7 @@ import numpy as np
 #                        MAIN CLASS                         #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class HarmonySearchAlgorithm:
-    def __init__(self, individuals, hmcr, par, bw):
+    def __init__(self, individuals, hmcr: float = 0.9, par: float = 0.2, bw: float = 0.05):
         self.individuals = individuals
         self.hmcr = hmcr
         self.par = par
