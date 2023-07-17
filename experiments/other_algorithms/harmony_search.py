@@ -5,6 +5,7 @@
 #                                                           #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 # Import statements:
+import time
 import numpy as np
 
 
@@ -84,7 +85,8 @@ class HarmonySearchAlgorithm:
         # Return the selected individuals:
         return new_sorted_individuals, new_sorted_fitness
 
-    def fit(self, fitness_function, bounds, max_iterations=1000, seed=0, verbose=False, initialize=False):
+    def fit(self, fitness_function, bounds, max_iterations=1000, seed=0, verbose=False, initialize=False,
+            time_limit: int = None, evaluation_limit: int = None):
         """
         This function performs the genetic algorithm.
         :param fitness_function: A function that receives a numpy array with the individuals and returns a numpy array
@@ -93,9 +95,12 @@ class HarmonySearchAlgorithm:
         :param seed: The seed for the random number generator.
         :param initialize: A boolean or array to initialize the population.
         :param verbose: A boolean to print the results.
+        :param time_limit: A time limit in seconds.
+        :param evaluation_limit: An evaluation limit.
         :return: A numpy array with the best individuals.
         """
-        # Set the seed:
+        # Set the seed and time:
+        tik = time.perf_counter()
         np.random.seed(seed)
         # Initialize the population:
         if isinstance(initialize, np.ndarray):
@@ -117,6 +122,14 @@ class HarmonySearchAlgorithm:
             if verbose:
                 print(f"HS: Iteration: {iterations:3d} | Best fitness: {-fitness_values[0]:.3f} "
                       f"| Best individual: {individuals[0]}")
+            # Check the time limit:
+            if time_limit:
+                if time.perf_counter() - tik > time_limit:
+                    break
+            # Check the evaluation limit:
+            if evaluation_limit:
+                if fitness_function.number_of_evaluations > evaluation_limit:
+                    break
         # Return the best individuals:
         return individuals, -fitness_values
 

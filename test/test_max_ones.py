@@ -52,6 +52,7 @@ def main() -> None:
     tok = time.perf_counter()
     t_cro.fit(fitness_function, directives, max_iter=10, device='/GPU:0', seed=0, shards=1)
     tak = time.perf_counter()
+    t_cro.fit(fitness_function, directives, max_iter=int(1e10), device='/GPU:0', seed=0, shards=1, time_limit=60)
     print(f"CPU time: {tok - tik}")
     print(f"GPU time: {tak - tok}")
     print(f'GPU speed up over CPU: {(tok - tik) / (tak - tok)}')

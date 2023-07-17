@@ -8,6 +8,8 @@ import multiprocessing
 import shutil
 import os
 import json
+import time
+
 import tensorflow as tf
 import numpy as np
 from typing import Callable
@@ -78,7 +80,8 @@ class TensorCro:
         self.n_fit = None
 
     def fit(self, fitness_function: (TensorFlowFunction, Callable), individual_directives: tf.Tensor, save: bool = True,
-            max_iter: int = 100, device: str = '/GPU:0', seed: int = None, init=None, shards=None, monitor=False) \
+            max_iter: int = 100, device: str = '/GPU:0', seed: int = None, init=None, shards=None, monitor=False,
+            time_limit: int = None, evaluation_limit: int = None) \
             -> tf.Tensor:
         """
         This function is the main loop of the algorithm. It will run the algorithm until the maximum number of
@@ -93,6 +96,8 @@ class TensorCro:
         :param shards: number of shards to use for the computation.
         :param monitor: boolean to tell if the algorithm should track the progress.
         :param save: boolean to tell if the algorithm should save the progress.
+        :param time_limit: Time limit for the algorithm in seconds.
+        :param evaluation_limit: Number of max evaluations for the algorithm.
         :return: the best solution found.
         """
         # Formatting directives:
@@ -118,6 +123,11 @@ class TensorCro:
             _fitness_function = _function_cast_(fitness_function)
         else:
             _fitness_function = fitness_function
+        # Time limit tik:
+        if time_limit:
+            tik = time.perf_counter()
+        else:
+            tik = 0
         # Using the selected device:
         with tf.device(device):
             __progress_bar = tf.keras.utils.Progbar(max_iter // shards)
@@ -132,6 +142,12 @@ class TensorCro:
                     if __p is not None:
                         __p.terminate()
                     __p = self.watch_replay()
+                if time_limit:
+                    if time.perf_counter() - tik > time_limit:
+                        break
+                if evaluation_limit:
+                    if fitness_function.number_of_evaluations > evaluation_limit:
+                        break
             sorted_reef = tf.gather(tf.reshape(reef, (-1, tf.shape(individual_directives)[-1])),
                                     tf.argsort(tf.reshape(fitness, (-1,)), direction='DESCENDING'))
             __progress_bar.update(max_iter // shards)
