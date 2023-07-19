@@ -6,11 +6,12 @@
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 # Import statements:
 import json
+import time
 import numpy as np
 import logging
 # Algorithms:
 from tensorcro import TensorCro, UniformCrossover, MultipointCrossover, HarmonySearch, RandomSearch, \
-    ComposedSubstrate, Mutation
+    ComposedSubstrate, Mutation, DifferentialSearch
 from other_algorithms import GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm, SimulatedAnnealingAlgorithm
 # Many local minima functions:
 from test_functions import AckleyFunction, BukinFunction6, CrossInTrayFunction, DropWaveFunction, EggHolderFunction, \
@@ -28,11 +29,12 @@ logging.basicConfig(filename='./results/logging.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
 logging.basicConfig(format='[%(asctime)s] ^ %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 # Global parameters:
-SEED = 2023
-FUNCTIONS = {'local_minima': [
-    AckleyFunction, BukinFunction6, CrossInTrayFunction, DropWaveFunction, EggHolderFunction,
-    GramacyLeeFunction, GrieWankFunction, HolderTableFunction, RastriginFunction, LevyFunction,
-    ShubertFunction],
+SEEDS = [2023 + i for i in range(10)]
+FUNCTIONS = {
+    'local_minima': [
+        AckleyFunction, BukinFunction6, CrossInTrayFunction, DropWaveFunction, EggHolderFunction,
+        GramacyLeeFunction, GrieWankFunction, HolderTableFunction, RastriginFunction, LevyFunction,
+        ShubertFunction],
     'bowl_shape':
         [PermZDB, HyperEpsiloid, HyperSphere],
     'valley_shape':
@@ -42,7 +44,7 @@ FUNCTIONS = {'local_minima': [
     'other':
         [StyblinskiTang, Powell]}
 ALGORITHMS = [TensorCro, GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm, SimulatedAnnealingAlgorithm]
-DIMENSIONS = [5, 50, 100, 150, 200, 250, 300]
+DIMENSIONS = [5, 20, 50, 200, 500]
 RESULTS_PATH = './results/'
 
 
@@ -70,24 +72,39 @@ def run_tests() -> None:
 
 def test_1() -> None:
     # We run the test 1 with the following parameters:
-    # - Seed number:            2023
+    # - Seed number:            2023, 2024, 2025, 2026, 2027, ..., 2033. (10 seeds)
     # - Number of iterations:   Time limited (2 - 5 - 10) minutes.
     # - Number of individuals:  Dimension dependent: 20 times the dimension.
     # - Number of dimensions:   Variable.
     # - Function:               All implemented functions.
     # - Algorithms:             All implemented algorithms.
-    for times in [2, 5, 10]:
-        for algorithm in ALGORITHMS:
+
+    # Read current results:
+    try:
+        with open(RESULTS_PATH + 'test_1.json', 'r') as f:
+            current_json = json.load(f)
+    except FileNotFoundError:
+        current_json = {'test_1': list()}
+    except json.decoder.JSONDecodeError:
+        current_json = {'test_1': list()}
+
+    # We run the test:
+    for seed in SEEDS:
+        for dimension in DIMENSIONS:
             for function_type, function_list in FUNCTIONS.items():
                 for test_function in function_list:
-                    for dimension in DIMENSIONS:
+                    for algorithm in ALGORITHMS:
                         # We compose the current test:
                         test_function_instance = test_function()
                         core_bounds = test_function_instance.bounds
                         bounds = np.array([core_bounds] * dimension, dtype=np.float32).T
                         # Run the algorithm:
+                        tik = time.perf_counter()
                         if algorithm is not SimulatedAnnealingAlgorithm and algorithm is not TensorCro:
                             ai = algorithm(20 * dimension)
+                            # We run the algorithm:
+                            best_ind, best_fit = ai.fit(test_function_instance, bounds, int(1e10),
+                                                        time_limit=60, seed=seed)
                         elif algorithm is TensorCro:
                             uniform_crossover = UniformCrossover()
                             harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.1, bandwidth=0.05, directives=bounds)
@@ -96,108 +113,115 @@ def test_1() -> None:
                                 MultipointCrossover([dimension // 2]),
                                 Mutation('gaussian', mean=0.0, stddev=0.05), name='GeneticAlgorithm'
                             )
-                            only_mutation = ComposedSubstrate(
-                                Mutation('gaussian', mean=0.0, stddev=0.1), name='OnlyMutation'
-                            )
-                            subs = [uniform_crossover, harmony_search, random_search, genetic_algorithm, only_mutation]
+                            differential_search = DifferentialSearch(bounds)
+                            subs = [uniform_crossover, harmony_search, random_search,
+                                    genetic_algorithm, differential_search]
                             ai = TensorCro(reef_shape=(5, dimension * 4), subs=subs)
+                            # We run the algorithm:
+                            best_ind, best_fit = ai.fit(test_function_instance, bounds, max_iter=int(1e6), save=False,
+                                                        time_limit=60, seed=seed, shards=1, minimize=True)
                         else:
                             ai = algorithm()
-                        # We run the algorithm:
-                        best_ind, best_fit = ai.fit(test_function_instance, bounds, int(1e10),
-                                                    time_limit=times * 60, seed=SEED)
+                            # We run the algorithm:
+                            best_ind, best_fit = ai.fit(test_function_instance, bounds, int(1e10),
+                                                        time_limit=60, seed=seed)
+                        tok = time.perf_counter()
                         # We convert the results to list if they are not:
                         if not isinstance(best_ind, np.ndarray):
                             best_ind = best_ind.numpy().tolist()
                             best_fit = best_fit.numpy().tolist()
                         # Save the results:
                         with open(RESULTS_PATH + 'test_1.json', 'w') as f:
-                            json.dump({'algorithm': algorithm.__name__,
-                                       'function': test_function.__name__,
-                                       'dimension': dimension,
-                                       'best_fit': float(best_fit[0]),
-                                       'best_ind': list(best_ind[0]),
-                                       'time_limit': times * 60,
-                                       'num_eval': test_function_instance.number_of_evaluations}, f, indent=4)
+                            current_json['test_1'].append({
+                                'algorithm': algorithm.__name__,
+                                'function': test_function.__name__,
+                                'function_type': function_type,
+                                'dimension': dimension,
+                                'best_fit': float(best_fit[0]),
+                                'best_ind': list(best_ind[0]),
+                                'elapsed_time': tok - tik,
+                                'seed': seed,
+                                'num_eval': test_function_instance.number_of_evaluations})
+                            json.dump(current_json, f, indent=4)
                             f.write('\n')
                         # Logging:
-                        logging.info(f'Test 1: Algorithm: {algorithm.__name__}, Function: {test_function.__name__}:'
-                                     f'{test_function_instance.number_of_evaluations} eval, '
-                                     f'Dimension: {dimension}, Best fitness: {best_fit[0]}, Best individual: '
+                        logging.info(f'Test 1:\nAlgorithm: {algorithm.__name__},\nFunction: {test_function.__name__}:'
+                                     f'{test_function_instance.number_of_evaluations} eval,\nElapsed time: {tok - tik},'
+                                     f'\nDimension: {dimension},\nBest fitness: {best_fit[0]},\nBest individual:'
                                      f'{best_ind[0]}')
 
 
-def test_2() -> None:
-    # We run the test 2 with the following parameters:
-    # - Seed number:            2023
-    # - Number of iterations:   10_000 fitness evaluations.
-    # - Number of individuals:  Dimension dependent: 20 times the dimension.
-    # - Number of dimensions:   Variable.
-    # - Function:               All implemented functions.
-    # - Algorithms:             All implemented algorithms.
-    for algorithm in ALGORITHMS:
-        for function_type, function_list in FUNCTIONS.items():
-            for test_function in function_list:
-                for dimension in DIMENSIONS:
-                    # Run the algorithm:
-                    if algorithm is not SimulatedAnnealingAlgorithm:
-                        ai = algorithm(20 * dimension)
-                    else:
-                        ai = algorithm()
-                    # We run the algorithm:
-                    test_function_instance = test_function()
-                    core_bounds = test_function_instance.bounds
-                    bounds = np.array([core_bounds] * dimension).T
-                    best_ind, best_fit = ai.fit(test_function_instance, bounds, -1, seed=SEED)
-                    # Save the results:
-                    with open(RESULTS_PATH + 'test_2.json', 'w') as f:
-                        json.dump({'algorithm': algorithm.__name__,
-                                   'function': test_function.__name__,
-                                   'dimension': dimension,
-                                   'best_fit': float(best_fit),
-                                   'best_ind': list(best_ind),
-                                   'num_eval': test_function_instance.number_of_evaluations}, f, indent=4)
-                        f.write('\n')
-                    # Logging:
-                    logging.info(f'Test 2: Algorithm: {algorithm.__name__}, Function: {test_function.__name__}:'
-                                 f'{test_function_instance.number_of_evaluations} eval, '
-                                 f'Dimension: {dimension}, Best fitness: {best_fit[0]}, Best individual: {best_ind[0]}')
-
-
-def test_3() -> None:
-    # We run the test 2 with the following parameters:
-    # - Seed number:            2023
-    # - Number of iterations:   10 minutes and 50k fitness evaluations per function.
-    # - Number of individuals:  Dimension dependent: 20 times the dimension.
-    # - Number of dimensions:   Variable.
-    # - Function:               All implemented functions.
-    # - Algorithms:             TensorCRO(GPU), CRO(CPU).
-    for device in ['/GPU:0', '/CPU:0']:
-        for function_type, function_list in FUNCTIONS.items():
-            for test_function in function_list:
-                for dimension in DIMENSIONS:
-                    # Run the algorithm:
-                    ai = TensorCro()
-                    # We run the algorithm:
-                    test_function_instance = test_function()
-                    core_bounds = test_function_instance.bounds
-                    bounds = np.array([core_bounds] * dimension).T
-                    best_ind, best_fit = ai.fit(test_function_instance, bounds, -1, seed=SEED, device=device)
-                    # Save the results:
-                    with open(RESULTS_PATH + 'test_3.json', 'w') as f:
-                        json.dump({'algorithm': f'TensorCRO:{device}',
-                                   'function': test_function.__name__,
-                                   'dimension': dimension,
-                                   'best_fit': float(best_fit),
-                                   'best_ind': list(best_ind),
-                                   'num_eval': test_function_instance.number_of_evaluations}, f, indent=4)
-                        f.write('\n')
-                    # Logging:
-                    logging.info(f'Test 3: Algorithm: TensorCRO:{device}, Function: {test_function.__name__}:'
-                                 f'{test_function_instance.number_of_evaluations} eval, '
-                                 f'Dimension: {dimension}, Best fitness: {best_fit[0]}, Best individual: {best_ind[0]}')
-
-
+# def test_2() -> None:
+#     # We run the test 2 with the following parameters:
+#     # - Seed number:            2023
+#     # - Number of iterations:   10_000 fitness evaluations.
+#     # - Number of individuals:  Dimension dependent: 20 times the dimension.
+#     # - Number of dimensions:   Variable.
+#     # - Function:               All implemented functions.
+#     # - Algorithms:             All implemented algorithms.
+#     for algorithm in ALGORITHMS:
+#         for function_type, function_list in FUNCTIONS.items():
+#             for test_function in function_list:
+#                 for dimension in DIMENSIONS:
+#                     # Run the algorithm:
+#                     if algorithm is not SimulatedAnnealingAlgorithm:
+#                         ai = algorithm(20 * dimension)
+#                     else:
+#                         ai = algorithm()
+#                     # We run the algorithm:
+#                     test_function_instance = test_function()
+#                     core_bounds = test_function_instance.bounds
+#                     bounds = np.array([core_bounds] * dimension).T
+#                     best_ind, best_fit = ai.fit(test_function_instance, bounds, -1, seed=SEED)
+#                     # Save the results:
+#                     with open(RESULTS_PATH + 'test_2.json', 'a') as f:
+#                         json.dump({'algorithm': algorithm.__name__,
+#                                    'function': test_function.__name__,
+#                                    'dimension': dimension,
+#                                    'best_fit': float(best_fit),
+#                                    'best_ind': list(best_ind),
+#                                    'num_eval': test_function_instance.number_of_evaluations}, f, indent=4)
+#                         f.write('\n')
+#                     # Logging:
+#                     logging.info(f'Test 2: Algorithm: {algorithm.__name__}, Function: {test_function.__name__}:'
+#                                  f'{test_function_instance.number_of_evaluations} eval, '
+#                                  f'Dimension: {dimension}, Best fitness: {best_fit[0]}, Best individual:
+#                                  {best_ind[0]}')
+#
+#
+# def test_3() -> None:
+#     # We run the test 2 with the following parameters:
+#     # - Seed number:            2023
+#     # - Number of iterations:   10 minutes and 50k fitness evaluations per function.
+#     # - Number of individuals:  Dimension dependent: 20 times the dimension.
+#     # - Number of dimensions:   Variable.
+#     # - Function:               All implemented functions.
+#     # - Algorithms:             TensorCRO(GPU), CRO(CPU).
+#     for device in ['/GPU:0', '/CPU:0']:
+#         for function_type, function_list in FUNCTIONS.items():
+#             for test_function in function_list:
+#                 for dimension in DIMENSIONS:
+#                     # Run the algorithm:
+#                     ai = TensorCro()
+#                     # We run the algorithm:
+#                     test_function_instance = test_function()
+#                     core_bounds = test_function_instance.bounds
+#                     bounds = np.array([core_bounds] * dimension).T
+#                     best_ind, best_fit = ai.fit(test_function_instance, bounds, -1, seed=SEED, device=device)
+#                     # Save the results:
+#                     with open(RESULTS_PATH + 'test_3.json', 'a') as f:
+#                         json.dump({'algorithm': f'TensorCRO:{device}',
+#                                    'function': test_function.__name__,
+#                                    'dimension': dimension,
+#                                    'best_fit': float(best_fit),
+#                                    'best_ind': list(best_ind),
+#                                    'num_eval': test_function_instance.number_of_evaluations}, f, indent=4)
+#                         f.write('\n')
+#                     # Logging:
+#                     logging.info(f'Test 3: Algorithm: TensorCRO:{device}, Function: {test_function.__name__}:'
+#                                  f'{test_function_instance.number_of_evaluations} eval, '
+#                                  f'Dimension: {dimension}, Best fitness: {best_fit[0]},
+#                                  Best individual: {best_ind[0]}')
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                           MAIN                            #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #

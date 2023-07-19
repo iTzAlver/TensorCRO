@@ -81,7 +81,7 @@ class TensorCro:
 
     def fit(self, fitness_function: (TensorFlowFunction, Callable), individual_directives: tf.Tensor, save: bool = True,
             max_iter: int = 100, device: str = '/GPU:0', seed: int = None, init=None, shards=None, monitor=False,
-            time_limit: int = None, evaluation_limit: int = None, minimize: bool = True) \
+            time_limit: int = None, evaluation_limit: int = None, minimize: bool = False) \
             -> tuple[tf.Tensor, tf.Tensor]:
         """
         This function is the main loop of the algorithm. It will run the algorithm until the maximum number of
@@ -132,8 +132,10 @@ class TensorCro:
         # Minimize or maximize:
         if minimize:
             reverse = -1
+            direction = 'ASCENDING'
         else:
             reverse = 1
+            direction = 'DESCENDING'
         # Using the selected device:
         with tf.device(device):
             __progress_bar = tf.keras.utils.Progbar(max_iter // shards)
@@ -150,16 +152,18 @@ class TensorCro:
                         __p.terminate()
                     __p = self.watch_replay()
                 if time_limit:
-                    if time.perf_counter() - tik > time_limit:
+                    tok = time.perf_counter()
+                    if tok - tik > time_limit:
+                        print('break:', tok)
                         break
                 if evaluation_limit:
                     if fitness_function.number_of_evaluations > evaluation_limit:
                         break
             sorted_reef = tf.gather(tf.reshape(reef, (-1, tf.shape(individual_directives)[-1])),
-                                    tf.argsort(tf.reshape(fitness, (-1,)), direction='DESCENDING'))
+                                    tf.argsort(tf.reshape(fitness, (-1,)), direction=direction))
             __progress_bar.update(max_iter // shards)
             sorted_fitness = tf.gather(tf.reshape(fitness, (-1,)), tf.argsort(tf.reshape(fitness, (-1,)),
-                                                                              direction='DESCENDING'))
+                                                                              direction=direction))
             return sorted_reef, sorted_fitness
 
     @tf.function

@@ -27,13 +27,14 @@ class PermZDB(OptimizationFunction):
         """
         dims = np.shape(x)[-1]
         j = np.arange(dims)
-        x_pow = np.expand_dims(x[:, j], -1) ** (j + 1)
+        expanded = np.expand_dims(x, -1)
+        x_pow = np.power(expanded, (j + 1))
 
         _j = np.arange(1, dims + 1).reshape(-1, 1)
         _i = np.arange(1, dims + 1)
-        inverse = _j ** _i
+        inverse = np.power(_j, _i)
         inner_0 = (j + 1 + self.beta) * x_pow / inverse
-        sum_0 = np.pow(np.sum(inner_0, axis=-2), 2)
+        sum_0 = np.power(np.sum(inner_0, axis=-2), 2)
         result = np.sum(sum_0, axis=-1)
         return result
 
