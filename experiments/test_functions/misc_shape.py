@@ -35,12 +35,19 @@ class Powell(OptimizationFunction):
         :param x: Input individual.
         :return: The value of each individual.
         """
-        set_0 = x[:, 0::4]
-        set_1 = x[:, 1::4]
-        set_2 = x[:, 2::4]
-        set_3 = x[:, 3::4]
-        return np.sum(np.power(set_0 + 10 * set_1, 2) + 5 * np.power(set_2 - set_3, 2) + np.power(set_1 - 2 * set_2, 4)
-                      + 10 * np.power(set_0 - set_3, 4), axis=1) / 2
+        _how_many_zeros_are_left = (4 - x.shape[1] % 4) % 4
+        _zeros = np.zeros((x.shape[0], _how_many_zeros_are_left))
+        _x = np.concatenate((x, _zeros), axis=1)
+        set_0 = _x[:, 0::4]
+        set_1 = _x[:, 1::4]
+        set_2 = _x[:, 2::4]
+        set_3 = _x[:, 3::4]
+        _1 = np.power(set_0 + 10 * set_1, 2)
+        _2 = 5 * np.power(set_2 - set_3, 2)
+        _4 = 10 * np.power(set_0 - set_3, 4)
+        _3 = np.power(set_1 - 2 * set_2, 4)
+
+        return np.sum(_1 + _2 + _3 + _4, axis=1) / 2
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        END OF FILE                        #

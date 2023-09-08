@@ -204,7 +204,8 @@ class ShubertFunction(OptimizationFunction):
         """
         _i = np.arange(1, 6)
         _value = np.sum(_i * np.cos((_i + 1) * x[:, :, None] + _i), axis=-1)
-        return np.prod(_value, axis=-1)
+        _return_value = np.prod(_value, axis=-1)
+        return _return_value
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        END OF FILE                        #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #

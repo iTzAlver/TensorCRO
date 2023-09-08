@@ -9,7 +9,6 @@ import shutil
 import os
 import json
 import time
-
 import tensorflow as tf
 import numpy as np
 from typing import Callable
@@ -146,7 +145,8 @@ class TensorCro:
                 reef, fitness = rf
                 fitness *= reverse
                 if save:
-                    self.__save_replay(reef, fitness)
+                    _fitness = tf.where(tf.math.is_finite(fitness), -fitness, TF_INF)
+                    self.__save_replay(reef, _fitness)
                 if monitor:
                     if __p is not None:
                         __p.terminate()
@@ -154,7 +154,6 @@ class TensorCro:
                 if time_limit:
                     tok = time.perf_counter()
                     if tok - tik > time_limit:
-                        print('break:', tok)
                         break
                 if evaluation_limit:
                     if fitness_function.number_of_evaluations > evaluation_limit:
@@ -164,6 +163,9 @@ class TensorCro:
             __progress_bar.update(max_iter // shards)
             sorted_fitness = tf.gather(tf.reshape(fitness, (-1,)), tf.argsort(tf.reshape(fitness, (-1,)),
                                                                               direction=direction))
+            if minimize:
+                # Replace TF_INF with -TF_INF and sign flip:
+                _fitness = tf.where(tf.math.is_finite(fitness), fitness, TF_INF)
             return sorted_reef, sorted_fitness
 
     @tf.function

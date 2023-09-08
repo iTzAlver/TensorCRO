@@ -6,6 +6,8 @@
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 import numpy as np
 from abc import ABC, abstractmethod
+MAXIMUM_OUTPUT = 1_000_000_000
+MINIMUM_OUTPUT = -MAXIMUM_OUTPUT
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
@@ -27,7 +29,9 @@ class OptimizationFunction(ABC):
         :return: The result of the function.
         """
         self.number_of_evaluations += len(args)
-        return self.function(*args)
+        retval = self.function(*args)
+        clipped_retval = np.clip(retval, MINIMUM_OUTPUT, MAXIMUM_OUTPUT)
+        return clipped_retval
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        END OF FILE                        #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #

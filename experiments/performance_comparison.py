@@ -14,10 +14,10 @@ from tensorcro import TensorCro, UniformCrossover, MultipointCrossover, HarmonyS
     ComposedSubstrate, Mutation, DifferentialSearch
 from other_algorithms import GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm, SimulatedAnnealingAlgorithm
 # Many local minima functions:
-from test_functions import AckleyFunction, BukinFunction6, CrossInTrayFunction, DropWaveFunction, EggHolderFunction, \
-        GramacyLeeFunction, GrieWankFunction, HolderTableFunction, RastriginFunction, LevyFunction, ShubertFunction
+from test_functions import AckleyFunction, BukinFunction6, DropWaveFunction, EggHolderFunction, \
+        GramacyLeeFunction, GrieWankFunction, HolderTableFunction, RastriginFunction
 # Bowl shape functions:
-from test_functions import PermZDB, HyperEpsiloid, HyperSphere
+from test_functions import HyperEpsiloid, HyperSphere
 # Valley shape functions:
 from test_functions import DixonPrice, Rosenbrock
 # Flat shape functions:
@@ -32,11 +32,10 @@ logging.basicConfig(format='[%(asctime)s] ^ %(message)s', datefmt='%m/%d/%Y %I:%
 SEEDS = [2023 + i for i in range(10)]
 FUNCTIONS = {
     'local_minima': [
-        AckleyFunction, BukinFunction6, CrossInTrayFunction, DropWaveFunction, EggHolderFunction,
-        GramacyLeeFunction, GrieWankFunction, HolderTableFunction, RastriginFunction, LevyFunction,
-        ShubertFunction],
+        AckleyFunction, BukinFunction6, DropWaveFunction, EggHolderFunction,
+        GramacyLeeFunction, GrieWankFunction, HolderTableFunction, RastriginFunction],
     'bowl_shape':
-        [PermZDB, HyperEpsiloid, HyperSphere],
+        [HyperEpsiloid, HyperSphere],
     'valley_shape':
         [DixonPrice, Rosenbrock],
     'flat_shape':
@@ -45,7 +44,9 @@ FUNCTIONS = {
         [StyblinskiTang, Powell]}
 ALGORITHMS = [TensorCro, GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm, SimulatedAnnealingAlgorithm]
 DIMENSIONS = [5, 20, 50, 200, 500]
+DIMENSIONS.reverse()
 RESULTS_PATH = './results/'
+TIME_LIMIT = 100
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
@@ -94,61 +95,70 @@ def test_1() -> None:
             for function_type, function_list in FUNCTIONS.items():
                 for test_function in function_list:
                     for algorithm in ALGORITHMS:
-                        # We compose the current test:
-                        test_function_instance = test_function()
-                        core_bounds = test_function_instance.bounds
-                        bounds = np.array([core_bounds] * dimension, dtype=np.float32).T
-                        # Run the algorithm:
-                        tik = time.perf_counter()
-                        if algorithm is not SimulatedAnnealingAlgorithm and algorithm is not TensorCro:
-                            ai = algorithm(20 * dimension)
-                            # We run the algorithm:
-                            best_ind, best_fit = ai.fit(test_function_instance, bounds, int(1e10),
-                                                        time_limit=60, seed=seed)
-                        elif algorithm is TensorCro:
-                            uniform_crossover = UniformCrossover()
-                            harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.1, bandwidth=0.05, directives=bounds)
-                            random_search = RandomSearch(bounds, 0.2)
-                            genetic_algorithm = ComposedSubstrate(
-                                MultipointCrossover([dimension // 2]),
-                                Mutation('gaussian', mean=0.0, stddev=0.05), name='GeneticAlgorithm'
-                            )
-                            differential_search = DifferentialSearch(bounds)
-                            subs = [uniform_crossover, harmony_search, random_search,
-                                    genetic_algorithm, differential_search]
-                            ai = TensorCro(reef_shape=(5, dimension * 4), subs=subs)
-                            # We run the algorithm:
-                            best_ind, best_fit = ai.fit(test_function_instance, bounds, max_iter=int(1e6), save=False,
-                                                        time_limit=60, seed=seed, shards=1, minimize=True)
-                        else:
-                            ai = algorithm()
-                            # We run the algorithm:
-                            best_ind, best_fit = ai.fit(test_function_instance, bounds, int(1e10),
-                                                        time_limit=60, seed=seed)
-                        tok = time.perf_counter()
-                        # We convert the results to list if they are not:
-                        if not isinstance(best_ind, np.ndarray):
-                            best_ind = best_ind.numpy().tolist()
-                            best_fit = best_fit.numpy().tolist()
-                        # Save the results:
-                        with open(RESULTS_PATH + 'test_1.json', 'w') as f:
-                            current_json['test_1'].append({
-                                'algorithm': algorithm.__name__,
-                                'function': test_function.__name__,
-                                'function_type': function_type,
-                                'dimension': dimension,
-                                'best_fit': float(best_fit[0]),
-                                'best_ind': list(best_ind[0]),
-                                'elapsed_time': tok - tik,
-                                'seed': seed,
-                                'num_eval': test_function_instance.number_of_evaluations})
-                            json.dump(current_json, f, indent=4)
-                            f.write('\n')
-                        # Logging:
-                        logging.info(f'Test 1:\nAlgorithm: {algorithm.__name__},\nFunction: {test_function.__name__}:'
-                                     f'{test_function_instance.number_of_evaluations} eval,\nElapsed time: {tok - tik},'
-                                     f'\nDimension: {dimension},\nBest fitness: {best_fit[0]},\nBest individual:'
-                                     f'{best_ind[0]}')
+                        if not check_occurrence({'seed': seed, 'dimension': dimension, 'function':
+                                                 test_function.__name__, 'algorithm': algorithm.__name__},
+                                                current_json['test_1']):
+                            # We compose the current test:
+                            logging.info(f'[+] Running test with seed {seed}, dimension {dimension}, '
+                                         f'function {test_function.__name__} and algorithm {algorithm.__name__}.')
+                            test_function_instance = test_function()
+                            core_bounds = test_function_instance.bounds
+                            bounds = np.array([core_bounds] * dimension, dtype=np.float32).T
+                            # Run the algorithm:
+                            tik = time.perf_counter()
+                            if algorithm is not SimulatedAnnealingAlgorithm and algorithm is not TensorCro:
+                                ai = algorithm(20 * dimension)
+                                # We run the algorithm:
+                                best_ind, best_fit = ai.fit(test_function_instance, bounds, int(1e10),
+                                                            time_limit=TIME_LIMIT, seed=seed)
+                            elif algorithm is TensorCro:
+                                uniform_crossover = UniformCrossover()
+                                harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.1, bandwidth=0.05, directives=bounds)
+                                random_search = RandomSearch(bounds, 0.2)
+                                genetic_algorithm = ComposedSubstrate(
+                                    MultipointCrossover([dimension // 2]),
+                                    Mutation('gaussian', mean=0.0, stddev=0.05), name='GeneticAlgorithm'
+                                )
+                                differential_search = DifferentialSearch(bounds)
+                                subs = [uniform_crossover, harmony_search, random_search,
+                                        genetic_algorithm, differential_search]
+                                ai = TensorCro(reef_shape=(5, dimension * 4), subs=subs)
+                                # We run the algorithm:
+                                best_ind, best_fit = ai.fit(test_function_instance, bounds,
+                                                            max_iter=int(1e6), save=False,
+                                                            time_limit=TIME_LIMIT, seed=seed,
+                                                            shards=1, minimize=True)
+                            else:
+                                ai = algorithm()
+                                # We run the algorithm:
+                                best_ind, best_fit = ai.fit(test_function_instance, bounds, int(1e10),
+                                                            time_limit=TIME_LIMIT, seed=seed)
+                            tok = time.perf_counter()
+                            # We convert the results to list if they are not:
+                            if not isinstance(best_ind, np.ndarray):
+                                best_ind = best_ind.numpy().tolist()
+                                best_fit = best_fit.numpy().tolist()
+                            # Save the results:
+                            with open(RESULTS_PATH + 'test_1.json', 'w') as f:
+                                current_json['test_1'].append({
+                                    'algorithm': algorithm.__name__,
+                                    'function': test_function.__name__,
+                                    'function_type': function_type,
+                                    'dimension': dimension,
+                                    'best_fit': float(best_fit[0]),
+                                    'best_ind': list(best_ind[0]),
+                                    'elapsed_time': tok - tik,
+                                    'seed': seed,
+                                    'num_eval': test_function_instance.number_of_evaluations})
+                                json.dump(current_json, f, indent=4)
+                                f.write('\n')
+                            # Logging:
+                            logging.info(f'Test 1:\nAlgorithm: {algorithm.__name__},\n'
+                                         f'Function: {test_function.__name__}:'
+                                         f'{test_function_instance.number_of_evaluations} eval,\n'
+                                         f'Elapsed time: {tok - tik},'
+                                         f'\nDimension: {dimension},\nBest fitness: {best_fit[0]},\nBest individual:'
+                                         f'{best_ind[0]}')
 
 
 # def test_2() -> None:
@@ -222,6 +232,18 @@ def test_1() -> None:
 #                                  f'{test_function_instance.number_of_evaluations} eval, '
 #                                  f'Dimension: {dimension}, Best fitness: {best_fit[0]},
 #                                  Best individual: {best_ind[0]}')
+
+def check_occurrence(this_simulation, stored_simulations):
+    # We check if the current simulation is already done::
+    for stored_simulation in stored_simulations:
+        if this_simulation['function'] == stored_simulation['function'] and \
+                this_simulation['dimension'] == stored_simulation['dimension'] and \
+                this_simulation['algorithm'] == stored_simulation['algorithm'] and \
+                this_simulation['seed'] == stored_simulation['seed']:
+            return True
+    return False
+
+
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                           MAIN                            #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
