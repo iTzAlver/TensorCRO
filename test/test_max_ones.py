@@ -23,8 +23,8 @@ def fitness_function(individuals: tf.RaggedTensor):
 
 
 def main() -> None:
-    od = [(0, 0, 0, 0.5, 0), (1, 1, 1, 1, 0.5)]
-    directives = tf.convert_to_tensor([(0, 0, 0, 0.5, 0), (1, 1, 1, 1, 0.5)], dtype_hint=tf.float32)
+    od = [(0., 0., 0., 0.5, 0.), (1., 1., 1., 1., 0.5)]
+    directives = tf.convert_to_tensor([(0., 0., 0., 0.5, 0.), (1., 1., 1., 1., 0.5)], dtype_hint=tf.float32)
     reef_shape = (10, 20)
 
     uniform_crossover = UniformCrossover()

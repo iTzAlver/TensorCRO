@@ -22,7 +22,7 @@ def fitness_function(individuals: tf.RaggedTensor):
 
 
 def main() -> None:
-    n_ones = 1000000
+    n_ones = 1_000_000
     directives = tf.convert_to_tensor([[0] * n_ones, [1] * n_ones], dtype_hint=tf.float32)
     reef_shape = (10, 20)
 
