@@ -78,9 +78,9 @@ class TensorCro:
         self.seed = None
         self.n_fit = None
 
-    def fit(self, fitness_function: (TensorFlowFunction, Callable), individual_directives: tf.Tensor, save: bool = True,
-            max_iter: int = 100, device: str = '/GPU:0', seed: int = None, init=None, shards=None, monitor=False,
-            time_limit: int = None, evaluation_limit: int = None, minimize: bool = False) \
+    def fit(self, fitness_function: (TensorFlowFunction, Callable), individual_directives: tf.Tensor,
+            max_iter: int = 100, save: bool = True, device: str = '/GPU:0', seed: int = None, init=None, shards=None,
+            monitor=False, time_limit: int = None, evaluation_limit: int = None, minimize: bool = False) \
             -> tuple[tf.Tensor, tf.Tensor]:
         """
         This function is the main loop of the algorithm. It will run the algorithm until the maximum number of

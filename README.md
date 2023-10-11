@@ -114,10 +114,10 @@ of the repository.
 If you use this code, please cite the following paper:
 
 ```bibtex
-@inproceedings{palomo2022tensorcro,
+@inproceedings{palomo2023tensorcro,
   title={TensorCRO: A Tensorflow-based implementation of the Coral Reef Optimization algorithm},
-  author={Palomo-Alonso, A and Salcedo-Sanz, S},
+  author={Palomo-Alonso, A and García, V and Salcedo-Sanz, S},
   journal={arXiv preprint arXiv:X.Y},
-  year={2022}
+  year={2023}
 }
 ```
