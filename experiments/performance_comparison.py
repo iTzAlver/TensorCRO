@@ -9,6 +9,7 @@ import json
 import time
 import numpy as np
 import logging
+import tensorflow as tf
 # Algorithms:
 from tensorcro import TensorCro, UniformCrossover, MultipointCrossover, HarmonySearch, RandomSearch, \
     ComposedSubstrate, Mutation, DifferentialSearch
@@ -235,7 +236,7 @@ def test_3() -> None:
                             tik = time.perf_counter()
                             test_function_instance = test_function()
                             core_bounds = test_function_instance.bounds
-                            bounds = np.array([core_bounds] * dimension, dtype=np.float32).T
+                            bounds = tf.convert_to_tensor(np.array([core_bounds] * dimension, dtype=np.float32).T)
                             # Build the algorithm:
                             uniform_crossover = UniformCrossover()
                             harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.1, bandwidth=0.05, directives=bounds)
@@ -249,8 +250,9 @@ def test_3() -> None:
                                     genetic_algorithm, differential_search]
                             ai = TensorCro(reef_shape=(5, dimension * 4), subs=subs)
                             # Run the algorithm:
-                            best_ind, best_fit = ai.fit(test_function_instance, bounds, max_iter=int(1e6), save=False,
-                                                        time_limit=TIME_LIMIT, seed=seed, shards=1, minimize=True)
+                            best_ind, best_fit = ai.fit(test_function_instance, bounds, device=device,
+                                                        max_iter=int(1e6), save=False, time_limit=TIME_LIMIT,
+                                                        seed=seed, shards=1, minimize=True)
                             tok = time.perf_counter()
                             # We convert the results to list if they are not:
                             if not isinstance(best_ind, np.ndarray):
