@@ -49,7 +49,7 @@ DIMENSIONS.reverse()
 RESULTS_PATH = './results/'
 TIME_LIMIT = 300
 # TIME_LIMIT_OLD = 100
-# DIMENSIONS_OLD = [5, 20, 50, 200, 350, 500]
+# DIMENSIONS_OLD = [5, 20, 50, 200, 500]
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
