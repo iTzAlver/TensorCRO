@@ -10,7 +10,7 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorcro import TensorCro, UniformCrossover, MultipointCrossover, HarmonySearch, \
-    RandomSearch, ComposedSubstrate, Mutation
+    RandomSearch, ComposedSubstrate, Mutation, BLXAlphaCrossover
 from coverage_problem import csv_to_numpy, format_array, conv2d
 MAP_PATH = "./coverage_problem/points.csv"
 DEVICE_PATH = "./coverage_problem/gen5.csv"
@@ -24,10 +24,10 @@ class Fitness:
         """
         This class calculates the fitness of each individual.
         :param coordinates: Array of coordinates.
-        :param is_position:
-        :param coverage_boolean:
-        :param distance:
-        :param cost:
+        :param is_position: Array of booleans indicating if the coordinate is a position.
+        :param coverage_boolean: Array of booleans indicating if the coordinate is a coverage point.
+        :param distance: Array of distances.
+        :param cost: Array of costs.
         """
         # Set up main variables:
         self._coordinates = coordinates
@@ -180,7 +180,7 @@ class Fitness:
         _clipped_cost_along_axis = np.sum(_clipped_cost)
         cost += (__penalty__ * _clipped_cost_along_axis).astype(np.int32)
         # Plot:
-        plt.figure(figsize=(10, 5))
+        plt.figure(figsize=(10, 2.5))
         # For each device one subplot:
         for dev in range(_d.shape[0]):
             plt.subplot(1, len(self.cost), dev + 1)
@@ -188,9 +188,11 @@ class Fitness:
             x = _d[dev, :, :, np.newaxis] * np.array([0, 255, 0])
             y = np.expand_dims(_expanded_cov, axis=-1) * np.array([255, 0, 0])
             z = old_devs[dev, :, :, np.newaxis] * np.array([-255, -255, 0])
-            plt.imshow(x + y + z)
+            clipped = np.clip(x + y + z, 0, 255).astype(np.uint8)
+            white_centers = clipped + old_devs[dev, :, :, np.newaxis] * np.array([148, 0, 211])
+            plt.imshow(white_centers)
             plt.title(f'Device {dev + 1}')
-        plt.suptitle(f'Cost: {cost[0]}')
+        plt.suptitle(f'Fitness cost: {cost[0]} (€)')
         if save:
             plt.savefig(path)
 
@@ -200,17 +202,21 @@ class Fitness:
 
 def main() -> None:
     logging.info("[+] Connected to Coverage Problem.")
+
     # Load csv file:
     coordinates, is_position, coverage_boolean, distance, cost = format_array(*csv_to_numpy(MAP_PATH, DEVICE_PATH))
     fitness_function = Fitness(coordinates, is_position, coverage_boolean, distance, cost, framework='numpy')
     logging.info(f"[!] Fitness built successfully. Setting up TensorCro...")
+
     # [!] Set up TensorCro:
+
     # - Main parameters:
     n_dims = len(fitness_function.device_coordinates)
     directives = tf.convert_to_tensor([[fitness_function.bounds[0]] * n_dims,
                                        [fitness_function.bounds[1]] * n_dims],
                                       dtype_hint=tf.float32)
-    reef_shape = (50, 40)
+    reef_shape = (50, 50)
+
     # - Substrates:
     uniform_crossover = UniformCrossover()
     harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.1, bandwidth=0.05, directives=directives)
@@ -218,14 +224,19 @@ def main() -> None:
     genetic_algorithm = ComposedSubstrate(MultipointCrossover([n_dims // 2]),
                                           Mutation('gaussian', mean=0.0, stddev=0.05),
                                           name='GeneticAlgorithm')
-    subs = [uniform_crossover, harmony_search, random_search, genetic_algorithm]
+    blxa = BLXAlphaCrossover(directives, 0.2)
+    subs = [uniform_crossover, harmony_search, random_search, genetic_algorithm, blxa]
+
     # - TensorCro:
     t_cro = TensorCro(reef_shape, subs=subs)
+
     # - Fit:
     logging.info(f"[!] TensorCro built successfully. Starting optimization...")
-    best = t_cro.fit(fitness_function, directives, max_iter=120_000, device='/GPU:0', seed=0, shards=5, save=True)
+    best = t_cro.fit(fitness_function, directives, max_iter=1_000_000, device='/GPU:0', seed=0, shards=200,
+                     save=True, time_limit=3600)
     np.save('./best.npy', best[0])
     logging.info(f'[!] Optimization finished. Best individual: {best}')
+
     # - Plot:
     fitness_function.plot_solution(best[0], save=True, path='./optimization.png')
     logging.info("[-] Disconnected from Coverage Problem.")
