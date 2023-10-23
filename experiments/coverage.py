@@ -223,9 +223,8 @@ def main() -> None:
     t_cro = TensorCro(reef_shape, subs=subs)
     # - Fit:
     logging.info(f"[!] TensorCro built successfully. Starting optimization...")
-    # best = t_cro.fit(fitness_function, directives, max_iter=200, device='/GPU:0', seed=0, shards=5, save=True)
-    fitness_function(np.random.uniform(0, 1, (100, n_dims)))
-    best = np.load('./sol.npy')
+    best = t_cro.fit(fitness_function, directives, max_iter=120_000, device='/GPU:0', seed=0, shards=5, save=True)
+    np.save('./best.npy', best[0])
     logging.info(f'[!] Optimization finished. Best individual: {best}')
     # - Plot:
     fitness_function.plot_solution(best[0], save=True, path='./optimization.png')

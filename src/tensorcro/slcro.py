@@ -4,6 +4,7 @@
 # Universidad de Alcalá - Escuela Politécnica Superior      #
 #                                                           #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
+import logging
 import multiprocessing
 import shutil
 import os
@@ -92,7 +93,7 @@ class TensorCro:
         :param device: device to use for the calculations.
         :param seed: seed for the random number generator.
         :param init: initial population and fitness to use as a tuple.
-        :param shards: number of shards to use for the computation.
+        :param shards: Number of shards to use for the computation.
         :param monitor: boolean to tell if the algorithm should track the progress.
         :param save: boolean to tell if the algorithm should save the progress.
         :param time_limit: Time limit for the algorithm in seconds.
@@ -137,10 +138,11 @@ class TensorCro:
             direction = 'DESCENDING'
         # Using the selected device:
         with tf.device(device):
-            __progress_bar = tf.keras.utils.Progbar(max_iter // shards)
+            # __progress_bar = tf.keras.utils.Progbar(max_iter // shards)
+            __progress_bar = tf.keras.utils.Progbar(shards)
             __p = None
-            for _ in range(max_iter // shards):
-                rf = self._fit(_fitness_function, individual_directives, shards, rf, reverse=reverse)
+            for _ in range(shards):
+                rf = self._fit(_fitness_function, individual_directives, max_iter // shards, rf, reverse=reverse)
                 __progress_bar.update(_)
                 reef, fitness = rf
                 fitness *= reverse
@@ -160,7 +162,7 @@ class TensorCro:
                         break
             sorted_reef = tf.gather(tf.reshape(reef, (-1, tf.shape(individual_directives)[-1])),
                                     tf.argsort(tf.reshape(fitness, (-1,)), direction=direction))
-            __progress_bar.update(max_iter // shards)
+            __progress_bar.update(shards)
             sorted_fitness = tf.gather(tf.reshape(fitness, (-1,)), tf.argsort(tf.reshape(fitness, (-1,)),
                                                                               direction=direction))
             if minimize:
@@ -318,8 +320,15 @@ class TensorCro:
         self.n_fit += 1
         tensor_np = fitness.numpy()
         tensor2_np = reef.numpy()
-        np.save(f'{__replay_path__}/fitness_{self.n_fit}.npy', tensor_np)
-        np.save(f'{__replay_path__}/reef_{self.n_fit}.npy', tensor2_np)
+        try:
+            np.save(f'{__replay_path__}/fitness_{self.n_fit}.npy', tensor_np)
+            np.save(f'{__replay_path__}/reef_{self.n_fit}.npy', tensor2_np)
+        except OSError as e:
+            logging.error(f'[!] TensorCRO: Error saving replay: {e}. Clearing TMP.')
+            # Clear TMP folder:
+            shutil.rmtree(__replay_path__)
+            np.save(f'{__replay_path__}/fitness_{self.n_fit}.npy', tensor_np)
+            np.save(f'{__replay_path__}/reef_{self.n_fit}.npy', tensor2_np)
         # Save the name of the subs in a json file:
         sbs = [sub.__repr__() for sub in self._substrate_functions]
         with open(f'{__replay_path__}/config.json', 'w') as f:
