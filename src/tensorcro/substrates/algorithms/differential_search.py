@@ -33,7 +33,7 @@ class DifferentialSearch(CROSubstrate):
         self.cr = tf.constant(crossover_probability)
         self.bw = tf.constant(band_width) * (directives[1] - directives[0])
 
-    def _call(self, individuals: tf.Tensor):
+    def _call(self, individuals: tf.Tensor, **kwargs):
         noi = tf.shape(individuals)[0]
         mask = tf.random.uniform([noi, tf.shape(individuals)[-1]], minval=0., maxval=1.)
         binary_mask = tf.less(mask, self.cr)

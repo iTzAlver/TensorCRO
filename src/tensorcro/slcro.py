@@ -78,11 +78,12 @@ class TensorCro:
         self.shards = None
         self.seed = None
         self.n_fit = None
+        self.__fit = None
 
     def fit(self, fitness_function: (TensorFlowFunction, Callable), individual_directives: tf.Tensor,
             max_iter: int = 100, save: bool = True, device: str = '/GPU:0', seed: int = None, init=None, shards=None,
-            monitor=False, time_limit: int = None, evaluation_limit: int = None, minimize: bool = False) \
-            -> tuple[tf.Tensor, tf.Tensor]:
+            monitor=False, time_limit: int = None, evaluation_limit: int = None, minimize: bool = False,
+            callback=None, tf_compile: bool = True) -> tuple[tf.Tensor, tf.Tensor]:
         """
         This function is the main loop of the algorithm. It will run the algorithm until the maximum number of
         iterations is reached or the fitness function returns a value that is considered optimal.
@@ -99,6 +100,9 @@ class TensorCro:
         :param time_limit: Time limit for the algorithm in seconds.
         :param evaluation_limit: Number of max evaluations for the algorithm.
         :param minimize: Boolean to tell if the algorithm should minimize or maximize the fitness function.
+        :param callback: Callback function to be called after each shard. (Takes the current reef and fitness.
+        :param tf_compile: Boolean to tell if the fitness function should be compiled into TF-GRAPH.
+        as argument)
         :return: the best solution found.
         """
         # Formatting directives:
@@ -136,14 +140,19 @@ class TensorCro:
         else:
             reverse = 1
             direction = 'DESCENDING'
+        if tf_compile:
+            self.__fit = tf.function(self._fit)
+        else:
+            self.__fit = self._fit
         # Using the selected device:
         with tf.device(device):
             # __progress_bar = tf.keras.utils.Progbar(max_iter // shards)
             __progress_bar = tf.keras.utils.Progbar(shards)
             __p = None
+            __progress_bar.update(0)
             for _ in range(shards):
-                rf = self._fit(_fitness_function, individual_directives, max_iter // shards, rf, reverse=reverse)
-                __progress_bar.update(_)
+                rf = self.__fit(_fitness_function, individual_directives, max_iter // shards, rf, reverse=reverse)
+                __progress_bar.update(_ + 1)
                 reef, fitness = rf
                 fitness *= reverse
                 if save:
@@ -153,6 +162,8 @@ class TensorCro:
                     if __p is not None:
                         __p.terminate()
                     __p = self.watch_replay()
+                if callback is not None:
+                    callback(reef, tf.where(tf.math.is_finite(fitness), -fitness, TF_INF))
                 if time_limit:
                     tok = time.perf_counter()
                     if tok - tik > time_limit:
@@ -170,7 +181,6 @@ class TensorCro:
                 _fitness = tf.where(tf.math.is_finite(fitness), fitness, TF_INF)
             return sorted_reef, sorted_fitness
 
-    @tf.function
     def _fit(self, fitness_function: tf.function, individual_directives, max_iter: int = 100, init=None,
              reverse: int = 1) -> tuple:
         # Precompute some useful parameters:
@@ -303,6 +313,7 @@ class TensorCro:
         This function is used to perform the substrate crossover operation. It is called by the _crossover function.
         :param substrates: A list of functions that perform the substrate crossover operation.
         :param spawners: A list of reefs to perform the crossover operation on.
+        :param fitness: A list of fitness values for each spawner.
         :return: A tensor with the result of the crossover operation.
         """
         crossover = list()

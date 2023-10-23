@@ -27,7 +27,7 @@ class RandomSearch(CROSubstrate):
         self.min = directives[0]
         self.max = directives[1]
 
-    def _call(self, individuals: tf.Tensor):
+    def _call(self, individuals: tf.Tensor, **kwargs):
         if self.size <= 1:
             noi = tf.round(tf.cast(tf.shape(individuals)[0], dtype=tf.float32) * self.size)
         else:

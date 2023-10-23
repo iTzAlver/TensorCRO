@@ -13,11 +13,11 @@ import tensorflow as tf
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class CROSubstrate:
     @abc.abstractmethod
-    def _call(self, individuals: tf.Tensor) -> tf.Tensor:
+    def _call(self, individuals: tf.Tensor, **kwargs) -> tf.Tensor:
         return individuals
 
     def __call__(self, *args, **kwargs) -> tf.Tensor:
-        return self._call(*args)
+        return self._call(*args, **kwargs)
 
     def __repr__(self):
         return self.__class__.__name__
@@ -34,10 +34,10 @@ class ComposedSubstrate(CROSubstrate):
         self.subs = subs
         self.__name__ = name
 
-    def _call(self, individuals: tf.Tensor) -> tf.Tensor:
+    def _call(self, individuals: tf.Tensor, **kwargs) -> tf.Tensor:
         _individuals = individuals
         for sub in self.subs:
-            _individuals = sub(_individuals)
+            _individuals = sub(_individuals, **kwargs)
         return _individuals
 
     def __repr__(self):

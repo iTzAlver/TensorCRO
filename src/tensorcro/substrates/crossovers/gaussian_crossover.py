@@ -23,7 +23,7 @@ class GaussianCrossover(CROSubstrate):
         self.mean = tf.constant(mean)
         self.stddev = tf.constant(stddev)
 
-    def _call(self, individuals: tf.Tensor):
+    def _call(self, individuals: tf.Tensor, **kwargs):
         noi = tf.shape(individuals)[0] // 2
         fathers = individuals[0:noi]
         mothers = individuals[noi:noi * 2]

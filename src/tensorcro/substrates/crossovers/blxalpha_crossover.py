@@ -26,7 +26,7 @@ class BLXAlphaCrossover(CROSubstrate):
         self.mins = directives[0] * scale
         self.maxs = directives[1] * scale
 
-    def _call(self, individuals: tf.Tensor):
+    def _call(self, individuals: tf.Tensor, **kwargs):
         # Split the individuals in two groups
         noi = tf.shape(individuals)[0] // 2
         fathers = individuals[0:noi]

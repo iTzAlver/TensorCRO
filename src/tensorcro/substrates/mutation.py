@@ -37,7 +37,7 @@ class Mutation(CROSubstrate):
         self.func = FUNC[mutation_type]
         self.arguments = kwargs
 
-    def _call(self, individuals: tf.Tensor) -> tf.Tensor:
+    def _call(self, individuals: tf.Tensor, **kwargs) -> tf.Tensor:
         mutation = self.func(tf.shape(individuals), dtype=tf.float32, **self.arguments)
         return tf.math.add(individuals, mutation)
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #

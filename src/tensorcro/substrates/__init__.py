@@ -5,7 +5,7 @@
 #                                                           #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 from .crossovers import UniformCrossover, GaussianCrossover, MaskedCrossover, MultipointCrossover, BLXAlphaCrossover
-from .algorithms import HarmonySearch, RandomSearch, DifferentialSearch, HarmonyMutation
+from .algorithms import HarmonySearch, RandomSearch, DifferentialSearch, HarmonyMutation, ParticleSwarmOptimization
 from .substrate import ComposedSubstrate, CROSubstrate
 from .mutation import Mutation
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #

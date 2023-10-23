@@ -20,7 +20,7 @@ class UniformCrossover(CROSubstrate):
         arguments.
         """
 
-    def _call(self, individuals: tf.Tensor) -> tf.Tensor:
+    def _call(self, individuals: tf.Tensor, **kwargs) -> tf.Tensor:
         noi = tf.shape(individuals)[0] // 2
         fathers = individuals[0:noi]
         mothers = individuals[noi:noi * 2]

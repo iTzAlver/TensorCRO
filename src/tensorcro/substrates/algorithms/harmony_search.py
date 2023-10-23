@@ -44,7 +44,7 @@ class HarmonySearch(CROSubstrate):
         self.rs = RandomSearch(directives, 1)
         self.mut = Mutation('uniform', minval=directives[0], maxval=directives[1])
 
-    def _call(self, individuals: tf.Tensor):
+    def _call(self, individuals: tf.Tensor, **kwargs):
         noi = tf.shape(individuals)[0]
         np = tf.shape(individuals)[-1]
         mask = tf.random.uniform([2 * noi, tf.shape(individuals)[-1]], minval=0., maxval=1.)

@@ -8,7 +8,7 @@ from .slcro import TensorCro
 from .__special__ import __version__, __replay_path__
 from .replay import watch_replay
 from .substrates import UniformCrossover, GaussianCrossover, MaskedCrossover, MultipointCrossover, BLXAlphaCrossover, \
-    ComposedSubstrate, Mutation
+    ComposedSubstrate, Mutation, ParticleSwarmOptimization
 from .substrates import HarmonySearch, RandomSearch, DifferentialSearch
 # Format file:
 import os

@@ -21,7 +21,7 @@ class MaskedCrossover(CROSubstrate):
         """
         self.mask = tf.convert_to_tensor(mask)
 
-    def _call(self, individuals: tf.Tensor):
+    def _call(self, individuals: tf.Tensor, **kwargs):
         # Split the individuals in two groups
         noi = tf.shape(individuals)[0] // 2
         fathers = individuals[0:noi]
