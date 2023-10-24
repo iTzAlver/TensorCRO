@@ -130,7 +130,7 @@ def test_1() -> None:
                                 best_ind, best_fit = ai.fit(test_function_instance, bounds,
                                                             max_iter=int(1e6), save=False,
                                                             time_limit=TIME_LIMIT, seed=seed,
-                                                            shards=1, minimize=True)
+                                                            shards=None, minimize=True)
                             else:
                                 ai = algorithm()
                                 # We run the algorithm:
@@ -252,7 +252,7 @@ def test_3() -> None:
                             # Run the algorithm:
                             best_ind, best_fit = ai.fit(test_function_instance, bounds, device=device,
                                                         max_iter=int(1e6), save=False, time_limit=TIME_LIMIT,
-                                                        seed=seed, shards=1, minimize=True)
+                                                        seed=seed, shards=None, minimize=True)
                             tok = time.perf_counter()
                             # We convert the results to list if they are not:
                             if not isinstance(best_ind, np.ndarray):
