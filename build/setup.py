@@ -14,12 +14,13 @@ REQUIREMENTS = [
     'tensorflow>=2.12.0',
     'matplotlib>=3.7.1',
     'pandas>=2.0.0',
+    'slackclient>=2.9.3',
 ]
 
 
 setuptools.setup(
     name='tensorcro',
-    version='1.3.0',
+    version='2.1.0',
     author='Palomo-Alonso, Alberto',
     author_email='a.palomo@edu.uah',
     description='TensorCRO: A Tensorflow-based implementation of the Coral Reef Optimization algorithm.',
