@@ -21,6 +21,11 @@ Mutations:
 4. [Truncated Uniform](#truncated)
 5. [Gamma](#gamma)
 
+Stateful Algorithms:
+
+1. [Particle Swarm Optimization](#pso)
+2. [Simulated Annealing](#sa)
+
 # Crossovers:
 
 ## BLXAlpha <a name="blxalpha"></a>
@@ -138,9 +143,40 @@ value is given by a truncated uniform distribution.
 The GammaMutation method implements a gamma mutation. It is a mutation where the new value is
 given by a gamma distribution.
 
+# Stateful Algorithms:
+
+## Particle Swarm Optimization <a name="pso"></a>
+
+The Particle Swarm Optimization algorithm is a stateful algorithm. It is a crossover operator that uses
+the following formula:
+
+    Velocity (v) of individual i in the population (pop) in parameter (p) in epoch (t):
+    v[i][p][t + 1] =    inertia          * v[i][p][t]
+                      + social_factor    * (pop[i=best][p][t] - pop[i][p][t])
+                      + cognition_factor * (pop[i][p][t=best] - pop[i][p][t])
+
+Takes as input the following parameters:
+
+- :directives: Parameter specifications.
+- :inertia: Inertia of the algorithm (omega).
+- :cognitive: Cognitive parameter of the algorithm (c1).
+- :social: Social parameter of the algorithm (c2).
+- :shape: Size of the PSO population (float or int). ALL STATEFUL SUBSTRATES MUST HAVE THIS PARAMETER.
+
+## Simulated Annealing <a name="sa"></a>
+
+The Simulated Annealing algorithm is a stateful algorithm. It is a mutation operator that uses
+the following formula depending on the iteration number. It computes a temperature that is a threshold for a random
+number that substitutes the current value with that exact probability. In TensorCRO, the temperature decreases only if
+there is an alive coral in that spot.
+
+
+
 # References:
 
 1. [Coral Reef Optimization](https://sci2s.ugr.es/sites/default/files/ficherosPublicaciones/2352_07744242.pdf)
 2. [Differential Evolution](https://link.springer.com/article/10.1023/A:1008202821328)
 3. [Harmony Search](https://www.researchgate.net/publication/314523255_Harmony_Search_Algorithm)
 4. [Random Search](https://www.tandfonline.com/doi/abs/10.1080/01621459.1953.10501200)
+5. [Particle Swarm Optimization](https://ieeexplore.ieee.org/document/488968)
+6. [Simulated Annealing](https://www.mit.edu/~dbertsim/papers/Optimization/Simulated%20annealing.pdf)

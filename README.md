@@ -77,6 +77,18 @@ an interactive GUI.
 3. Now you can watch the training process while running.
 4. The initialization of the reef now only take alive corals as inputs. (Major bug)
 
+### 2.0.0
+1. Major bug fixing.
+2. Added new optimization algorithms as substrates: PSO and SA.
+3. Now TensorCRO can implement any stateful optimization algorithm as a substrate as long as it does not 
+require fitness evaluations.
+4. Sharding rework: Now ``shards`` parameter  in `fit()` method is the number of divisions of the optimization method.
+5. Implemented `callbacks` feature: callable after each shard.
+6. Minimization bug fix.
+7. Optional compilation of fitness function.
+8. Notebook tutorial update.
+9. Added autoclip after calling substrates.
+
 ## Install
 
 To install it you must install the dependencies. Then, you can install the package with the following command

@@ -7,7 +7,7 @@
 import os
 __src_path__ = os.path.dirname(__file__)
 __replay_path__ = os.path.join(__src_path__, 'tmp/replay/')
-__version__ = '1.3.0'
+__version__ = '2.0.0'
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        END OF FILE                        #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #

@@ -258,7 +258,8 @@ class TensorCro:
                 s_ids.append(_id[:_ns[0]])
 
             # 1.- Broadcast spawning:
-            larvae_spawners = self._substrates(self._substrate_functions, spawners, s_fitness, s_ids)
+            _larvae_spawners = self._substrates(self._substrate_functions, spawners, s_fitness, s_ids)
+            larvae_spawners = tf.clip_by_value(_larvae_spawners, individual_directives[0], individual_directives[1])
 
             # 2.- Brooding:
             brooders = tf.concat(brooders, axis=0)
