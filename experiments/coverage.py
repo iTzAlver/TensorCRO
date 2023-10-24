@@ -11,9 +11,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tensorcro import TensorCro, UniformCrossover, MultipointCrossover, HarmonySearch, \
     RandomSearch, ComposedSubstrate, Mutation, BLXAlphaCrossover
+from tensorcro.replay.slack_callback import SlackCallback
 from coverage_problem import csv_to_numpy, format_array, conv2d
 MAP_PATH = "./coverage_problem/points.csv"
 DEVICE_PATH = "./coverage_problem/gen5.csv"
+SLACK_TOKEN = 'xoxb-5951328403522-6081308292118-7C0V2xu7qWzLsT1kTzs6OyCb'
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
@@ -203,6 +205,10 @@ class Fitness:
 def main() -> None:
     logging.info("[+] Connected to Coverage Problem.")
 
+    # Slack callback:
+    scbk = SlackCallback(SLACK_TOKEN, '#tensor-cro-dev', 'Alverciito',
+                         ':robot_face:')
+
     # Load csv file:
     coordinates, is_position, coverage_boolean, distance, cost = format_array(*csv_to_numpy(MAP_PATH, DEVICE_PATH))
     fitness_function = Fitness(coordinates, is_position, coverage_boolean, distance, cost, framework='numpy')
@@ -215,7 +221,7 @@ def main() -> None:
     directives = tf.convert_to_tensor([[fitness_function.bounds[0]] * n_dims,
                                        [fitness_function.bounds[1]] * n_dims],
                                       dtype_hint=tf.float32)
-    reef_shape = (50, 50)
+    reef_shape = (40, 50)
 
     # - Substrates:
     uniform_crossover = UniformCrossover()
@@ -232,8 +238,13 @@ def main() -> None:
 
     # - Fit:
     logging.info(f"[!] TensorCro built successfully. Starting optimization...")
-    best = t_cro.fit(fitness_function, directives, max_iter=500_000, device='/GPU:0', seed=0, shards=1_000,
-                     save=True, time_limit=1*3600)
+    try:
+        best = t_cro.fit(fitness_function, directives, max_iter=5, device='/CPU:0', seed=0, shards=5,
+                         save=True, time_limit=1*3600, callback=scbk, tf_compile=False)
+    except Exception as ex:
+        scbk.exception_handler(ex)
+        raise ex
+    scbk.end(best[0].numpy())
     np.save('./best_solutions.npy', best[0])
     logging.info(f'[!] Optimization finished. Best individual: {best}')
 

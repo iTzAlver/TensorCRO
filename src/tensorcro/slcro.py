@@ -165,7 +165,11 @@ class TensorCro:
                         __p.terminate()
                     __p = self.watch_replay()
                 if callback is not None:
-                    callback(reef, tf.where(tf.math.is_finite(fitness), fitness, TF_INF))
+                    callback(tf.gather(tf.reshape(reef, (-1, tf.shape(individual_directives)[-1])),
+                                       tf.argsort(tf.reshape(fitness, (-1,)), direction=direction)),
+                             tf.gather(tf.reshape(fitness, (-1,)), tf.argsort(tf.reshape(fitness, (-1,)),
+                                                                              direction=direction)),
+                             shards)
                 if time_limit:
                     tok = time.perf_counter()
                     if tok - tik > time_limit:
