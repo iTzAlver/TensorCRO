@@ -4,7 +4,7 @@
 # Universidad de Alcalá - Escuela Politécnica Superior      #
 #                                                           #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
-from tensorcro import TensorCro, ParticleSwarmOptimization, RandomSearch
+from tensorcro import TensorCro, ParticleSwarmOptimization, SimulatedAnnealing
 import tensorflow as tf
 import logging
 import time
@@ -26,13 +26,14 @@ def main() -> None:
     directives = tf.convert_to_tensor([(0., 0., 0., 0.5, 0.), (1., 1., 1., 1., 0.5)], dtype_hint=tf.float32)
     reef_shape = (10, 20)
 
-    pso = ParticleSwarmOptimization(directives, inertia=0.5, cognition=1., social=1.)
-    random_search = RandomSearch(directives, 0.2)
+    sub_shape = (10, 10)  # Pre-compute.
+    pso = ParticleSwarmOptimization(directives, shape=sub_shape, inertia=0.5, cognition=1., social=1.)
+    simulated_annealing = SimulatedAnnealing(directives, kmax=100, bandwidth=0.2, shape=sub_shape)
 
-    subs = [pso, random_search]
+    subs = [pso, simulated_annealing]
     t_cro = TensorCro(reef_shape, subs=subs)
     tik = time.perf_counter()
-    t_cro.fit(fitness_function, directives, max_iter=10, device='/CPU:0', seed=0, shards=1, tf_compile=False)
+    t_cro.fit(fitness_function, directives, max_iter=5_000, device='/GPU:0', seed=0, shards=500)
     tak = time.perf_counter()
     print(f"GPU time: {tak - tik}")
     t_cro.save_replay('./replay')

@@ -16,7 +16,6 @@ from typing import Callable
 from tensorflow.python.eager.polymorphic_function.polymorphic_function import Function as TensorFlowFunction
 from .__special__ import __replay_path__
 from .replay import watch_replay
-
 TF_INF = tf.constant(-np.inf, dtype=tf.float32)
 
 
@@ -68,7 +67,7 @@ class TensorCro:
         self._pd = tf.constant(pd, dtype=tf.float32)
         self._fd = tf.constant(fd, dtype=tf.float32)
         # Substrates:
-        self._substrate_functions = subs
+        self.__substrate_functions = subs
         if self._reef_shape[1] % len(subs) != 0:
             raise ValueError('TensorCRO: The reef columns are not divisible by the number of selected substrates.')
         else:
@@ -79,11 +78,12 @@ class TensorCro:
         self.seed = None
         self.n_fit = None
         self.__fit = None
+        self._substrate_functions = subs
 
     def fit(self, fitness_function: (TensorFlowFunction, Callable), individual_directives: tf.Tensor,
-            max_iter: int = 100, save: bool = True, device: str = '/GPU:0', seed: int = None, init=None, shards=None,
-            monitor=False, time_limit: int = None, evaluation_limit: int = None, minimize: bool = False,
-            callback=None, tf_compile: bool = True) -> tuple[tf.Tensor, tf.Tensor]:
+            max_iter: int = 100, save: bool = True, device: str = '/GPU:0', seed: int = None, init: tf.Tensor = None,
+            shards: int = None, monitor: bool = None, time_limit: int = None, evaluation_limit: int = None,
+            minimize: bool = False, callback: Callable = None, tf_compile: bool = True) -> tuple[tf.Tensor, tf.Tensor]:
         """
         This function is the main loop of the algorithm. It will run the algorithm until the maximum number of
         iterations is reached or the fitness function returns a value that is considered optimal.
@@ -100,9 +100,10 @@ class TensorCro:
         :param time_limit: Time limit for the algorithm in seconds.
         :param evaluation_limit: Number of max evaluations for the algorithm.
         :param minimize: Boolean to tell if the algorithm should minimize or maximize the fitness function.
-        :param callback: Callback function to be called after each shard. (Takes the current reef and fitness.
+        :param callback: Callback function to be called after each shard. (Takes the current reef and fitness
+                as argument)
         :param tf_compile: Boolean to tell if the fitness function should be compiled into TF-GRAPH.
-        as argument)
+
         :return: the best solution found.
         """
         # Formatting directives:
@@ -142,6 +143,7 @@ class TensorCro:
             direction = 'DESCENDING'
         if tf_compile:
             self.__fit = tf.function(self._fit)
+            self._substrate_functions = [tf.function(sub) for sub in self._substrate_functions]
         else:
             self.__fit = self._fit
         # Using the selected device:
@@ -152,18 +154,18 @@ class TensorCro:
             __progress_bar.update(0)
             for _ in range(shards):
                 rf = self.__fit(_fitness_function, individual_directives, max_iter // shards, rf, reverse=reverse)
-                __progress_bar.update(_ + 1)
                 reef, fitness = rf
                 fitness *= reverse
+                __progress_bar.update(_ + 1, values=[('Best fitness', tf.reduce_max(fitness))])
                 if save:
-                    _fitness = tf.where(tf.math.is_finite(fitness), -fitness, TF_INF)
+                    _fitness = tf.where(tf.math.is_finite(fitness), fitness, TF_INF)
                     self.__save_replay(reef, _fitness)
                 if monitor:
                     if __p is not None:
                         __p.terminate()
                     __p = self.watch_replay()
                 if callback is not None:
-                    callback(reef, tf.where(tf.math.is_finite(fitness), -fitness, TF_INF))
+                    callback(reef, tf.where(tf.math.is_finite(fitness), fitness, TF_INF))
                 if time_limit:
                     tok = time.perf_counter()
                     if tok - tik > time_limit:
@@ -173,7 +175,7 @@ class TensorCro:
                         break
             sorted_reef = tf.gather(tf.reshape(reef, (-1, tf.shape(individual_directives)[-1])),
                                     tf.argsort(tf.reshape(fitness, (-1,)), direction=direction))
-            __progress_bar.update(shards)
+            __progress_bar.update(shards, values=[('Best fitness', tf.reduce_max(fitness))], finalize=True)
             sorted_fitness = tf.gather(tf.reshape(fitness, (-1,)), tf.argsort(tf.reshape(fitness, (-1,)),
                                                                               direction=direction))
             if minimize:
@@ -199,12 +201,12 @@ class TensorCro:
 
         # Create the numeric reef.
         if init is None:
-            # Build random reef tensor
+            # Build random reef tensor:
             reef = tf.random.uniform(__reef_shape, dtype=tf.float32, name='numeric_reef')
             reef = tf.add(tf.multiply(__parameter_maxmin_diff, reef), individual_directives[0], name='numeric_reef')
             reef = tf.clip_by_value(reef, individual_directives[0], individual_directives[1])  # Apply boundaries
 
-            # Build fitness tensor
+            # Build fitness tensor:
             occupied_idxs = tf.concat([tf.ones(self._n_init, dtype=tf.bool),
                                        tf.zeros(__initial_reef_shape[0] * __initial_reef_shape[1] - self._n_init,
                                                 dtype=tf.bool)], axis=0)
@@ -230,20 +232,33 @@ class TensorCro:
                                                                          tf.cast(n_corals_per_substrate, tf.float32))),
                                                dtype=tf.int32)
             n_brooders_per_substrate = tf.reduce_sum(tf.subtract(n_corals_per_substrate, n_spawners_per_substrate))
+            # - Get occupied cells:
             occupied_cells_idxs = tf.where(tf.math.is_finite(tf.squeeze(fitness)))
             occupied_cells_idxs_shuffled = tf.random.shuffle(occupied_cells_idxs)
+            # - Shuffle occupied cells:
             occupied_cells = tf.gather_nd(reef, occupied_cells_idxs_shuffled)
+            occupied_fitness = tf.gather_nd(fitness, occupied_cells_idxs_shuffled)
+            # - Substrate information partitioning:
             _partitions = tf.dynamic_partition(occupied_cells, tf.cast(occupied_cells_idxs_shuffled[:, 0], tf.int32),
                                                __n_substrates)
+            _partitions_fitness = tf.dynamic_partition(occupied_fitness, tf.cast(occupied_cells_idxs_shuffled[:, 0],
+                                                                                 tf.int32), __n_substrates)
+            _partitions_ids = tf.dynamic_partition(occupied_cells_idxs_shuffled[:, 1:], tf.cast(
+                occupied_cells_idxs_shuffled[:, 0], tf.int32), __n_substrates)
             spawners = list()
             brooders = list()
-            for _p, _ns in zip(_partitions, tf.dynamic_partition(n_spawners_per_substrate, tf.range(__n_substrates),
-                                                                 __n_substrates)):
+            s_fitness = list()
+            s_ids = list()
+            for _p, _f, _id, _ns in zip(_partitions, _partitions_fitness, _partitions_ids,
+                                        tf.dynamic_partition(n_spawners_per_substrate,
+                                                             tf.range(__n_substrates), __n_substrates)):
                 spawners.append(_p[:_ns[0]])
                 brooders.append(_p[_ns[0]:])
+                s_fitness.append(_f[:_ns[0]])
+                s_ids.append(_id[:_ns[0]])
 
             # 1.- Broadcast spawning:
-            larvae_spawners = self._substrates(self._substrate_functions, spawners)
+            larvae_spawners = self._substrates(self._substrate_functions, spawners, s_fitness, s_ids)
 
             # 2.- Brooding:
             brooders = tf.concat(brooders, axis=0)
@@ -308,17 +323,19 @@ class TensorCro:
         return __return_value
 
     @staticmethod
-    def _substrates(substrates, spawners):
+    def _substrates(substrates, spawners, fitness, ids):
         """
         This function is used to perform the substrate crossover operation. It is called by the _crossover function.
         :param substrates: A list of functions that perform the substrate crossover operation.
         :param spawners: A list of reefs to perform the crossover operation on.
         :param fitness: A list of fitness values for each spawner.
+        :param ids: A list of ids for each spawner.
+        :param reef_shape: The shape of the reef.
         :return: A tensor with the result of the crossover operation.
         """
         crossover = list()
-        for substrate, spawner in zip(substrates, spawners):
-            crossover.append(substrate(spawner))
+        for substrate, spawner, his_fitness, his_ids in zip(substrates, spawners, fitness, ids):
+            crossover.append(substrate(spawner, fitness=his_fitness, ids=his_ids))
         return tf.concat(crossover, axis=0)
 
     def __save_replay(self, reef, fitness):
@@ -341,7 +358,7 @@ class TensorCro:
             np.save(f'{__replay_path__}/fitness_{self.n_fit}.npy', tensor_np)
             np.save(f'{__replay_path__}/reef_{self.n_fit}.npy', tensor2_np)
         # Save the name of the subs in a json file:
-        sbs = [sub.__repr__() for sub in self._substrate_functions]
+        sbs = [sub.__repr__() for sub in self.__substrate_functions]
         with open(f'{__replay_path__}/config.json', 'w') as f:
             json.dump({'names': sbs, 'shards': self.shards, 'seed': self.seed}, f, indent=2)
 

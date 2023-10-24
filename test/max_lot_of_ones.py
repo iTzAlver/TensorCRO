@@ -38,18 +38,24 @@ def main() -> None:
 
     t_cro = TensorCro(reef_shape, subs=subs)
     # Warm up.
+    logging.info('Warm up CPU...')
     t_cro.fit(fitness_function, directives, max_iter=5, device='/CPU:0', seed=0, shards=5, save=False)
     # CPU speed.
+    logging.info('Running CPU...')
     tik = time.perf_counter()
     t_cro.fit(fitness_function, directives, max_iter=200, device='/CPU:0', seed=0, shards=5, save=False)
+    tok = time.perf_counter()
     logging.warning('CPU finished')
     # GPU speed.
-    tok = time.perf_counter()
+    logging.info('Warm up GPU...')
+    t_cro.fit(fitness_function, directives, max_iter=5, device='/GPU:0', seed=0, shards=5, save=False)
+    logging.info('Running GPU...')
+    tuk = time.perf_counter()
     best = t_cro.fit(fitness_function, directives, max_iter=200, device='/GPU:0', seed=0, shards=5, save=False)[0]
     logging.warning('GPU finished')
     # Print results.
     tak = time.perf_counter()
-    print(f'GPU speed up over CPU: {(tok - tik) / (tak - tok)}')
+    print(f'GPU speed up over CPU: {(tok - tik) / (tak - tuk)}')
     print(f'Best individual: {best}: {fitness_function(tf.convert_to_tensor([best]))}')
 
 

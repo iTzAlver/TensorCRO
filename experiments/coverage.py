@@ -232,8 +232,8 @@ def main() -> None:
 
     # - Fit:
     logging.info(f"[!] TensorCro built successfully. Starting optimization...")
-    best = t_cro.fit(fitness_function, directives, max_iter=1_000_000, device='/GPU:0', seed=0, shards=200,
-                     save=True, time_limit=3600)
+    best = t_cro.fit(fitness_function, directives, max_iter=500_000, device='/GPU:0', seed=0, shards=1_000,
+                     save=True, time_limit=1*3600)
     np.save('./best.npy', best[0])
     logging.info(f'[!] Optimization finished. Best individual: {best}')
 
