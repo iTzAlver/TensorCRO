@@ -56,10 +56,7 @@ TIME_LIMIT = 300
 #                        FUNCTION DEF                       #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 def run_tests() -> None:
-    # We run the test 1 for the article:
-    # logging.info('[+] Connected to Test 1:')
-    # test_1()
-    # logging.info('[-] Disconnected to Test 1.\n\n')
+
     # # We run the test 2 for the article:
     # logging.info('[+] Connected to Test 2:')
     # test_2()
@@ -72,6 +69,10 @@ def run_tests() -> None:
     # logging.info('[+] Connected to Test 4:')
     # test_4()
     # logging.info('[-] Disconnected to Test 4.\n\n')
+    # We run the test 1 for the article:
+    logging.info('[+] Connected to Test 1:')
+    test_1()
+    logging.info('[-] Disconnected to Test 1.\n\n')
 
 
 def test_1() -> None:
