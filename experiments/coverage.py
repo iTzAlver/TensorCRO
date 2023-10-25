@@ -15,7 +15,7 @@ from tensorcro.replay.slack_callback import SlackCallback
 from coverage_problem import csv_to_numpy, format_array, conv2d
 MAP_PATH = "./coverage_problem/points.csv"
 DEVICE_PATH = "./coverage_problem/gen5.csv"
-SLACK_TOKEN = 'xoxb-5951328403522-6081308292118-7C0V2xu7qWzLsT1kTzs6OyCb'
+SLACK_TOKEN = '<YOUR_SLACK_TOKEN_HERE>'
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
@@ -206,8 +206,7 @@ def main() -> None:
     logging.info("[+] Connected to Coverage Problem.")
 
     # Slack callback:
-    scbk = SlackCallback(SLACK_TOKEN, '#tensor-cro-dev', 'Alverciito',
-                         ':robot_face:')
+    scbk = SlackCallback(SLACK_TOKEN, '#tensor-cro-dev', 'Alverciito')
 
     # Load csv file:
     coordinates, is_position, coverage_boolean, distance, cost = format_array(*csv_to_numpy(MAP_PATH, DEVICE_PATH))
