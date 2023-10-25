@@ -15,7 +15,7 @@ from tensorcro.replay.slack_callback import SlackCallback
 from coverage_problem import csv_to_numpy, format_array, conv2d
 MAP_PATH = "./coverage_problem/points.csv"
 DEVICE_PATH = "./coverage_problem/gen5.csv"
-SLACK_TOKEN = '<YOUR_SLACK_TOKEN_HERE>'
+SLACK_TOKEN = ''
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
@@ -206,7 +206,8 @@ def main() -> None:
     logging.info("[+] Connected to Coverage Problem.")
 
     # Slack callback:
-    scbk = SlackCallback(SLACK_TOKEN, '#tensor-cro-dev', 'Alverciito')
+    slack_callback = SlackCallback(SLACK_TOKEN, '#tensor-cro-dev', 'Alverciito',
+                                   simulation_name='Coverage Problem (Scenario 1)')
 
     # Load csv file:
     coordinates, is_position, coverage_boolean, distance, cost = format_array(*csv_to_numpy(MAP_PATH, DEVICE_PATH))
@@ -239,11 +240,11 @@ def main() -> None:
     logging.info(f"[!] TensorCro built successfully. Starting optimization...")
     try:
         best = t_cro.fit(fitness_function, directives, max_iter=5, device='/CPU:0', seed=0, shards=5,
-                         save=True, time_limit=1*3600, callback=scbk, tf_compile=False)
+                         save=True, time_limit=1*3600, callback=slack_callback, tf_compile=False)
     except Exception as ex:
-        scbk.exception_handler(ex)
+        slack_callback.exception_handler(ex)
         raise ex
-    scbk.end(best[0].numpy())
+    slack_callback.end(best[0].numpy())
     np.save('./best_solutions.npy', best[0])
     logging.info(f'[!] Optimization finished. Best individual: {best}')
 

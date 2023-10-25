@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 #                        MAIN CLASS                         #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class SlackCallback:
-    def __init__(self, bot_token: str, channel: str, username: str):
+    def __init__(self, bot_token: str, channel: str, username: str, simulation_name: str = None):
         """
         Slack callback class. This class is used to send messages to a slack channel. It is used by the fit method
         to send messages to a slack channel when a shard is finished.
@@ -38,6 +38,10 @@ class SlackCallback:
         except Exception as e:
             logging.error(f'[SlackBot] Error fetching users: {e}')
         # Initialize variables:
+        if simulation_name is not None:
+            self.simulation_name = simulation_name
+        else:
+            self.simulation_name = 'TensorCRO'
         self.token = bot_token
         self.channel = channel
         self.username = username
@@ -73,7 +77,8 @@ class SlackCallback:
                     "text": {
                         "type": "mrkdwn",
                         "text": f"\n:warning::no_entry::warning::boom::warning::boom::warning::no_entry::warning:\n"
-                                f":coral:: *<@{self.username}>*, there was an error in your `TensorCRO` simulation."
+                                f":coral:: *<@{self.username}>*, there was an error in your "
+                                f"`{self.simulation_name}` simulation."
                     }
                 },
                 {
@@ -185,7 +190,7 @@ class SlackCallback:
                     "text": {
                         "type": "mrkdwn",
                         "text": f":raised_hands: :trophy: :sports_medal: :sparkler: :sports_medal: :trophy: \n"
-                                f":coral:: <@{self.username}>, your `TensorCRO` simulation has finished."
+                                f":coral:: <@{self.username}>, your `{self.simulation_name}` simulation has finished."
                     }
                 },
                 {
@@ -300,7 +305,8 @@ class SlackCallback:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f":coral:: *<@{self.username}>*, there is news about your `TensorCRO` simulation."
+                        "text": f":coral:: *<@{self.username}>*, there is news about your "
+                                f"`{self.simulation_name}` simulation."
                     }
                 },
                 {
