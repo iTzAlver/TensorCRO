@@ -56,7 +56,6 @@ TIME_LIMIT = 300
 #                        FUNCTION DEF                       #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 def run_tests() -> None:
-
     # # We run the test 2 for the article:
     # logging.info('[+] Connected to Test 2:')
     # test_2()
