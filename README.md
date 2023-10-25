@@ -89,6 +89,10 @@ require fitness evaluations.
 8. Notebook tutorial update.
 9. Added autoclip after calling substrates.
 
+### 2.1.0
+1. Implemented SlackBot, a real-time monitoring tool for TensorCRO and
+backup tool for the results.
+
 ## Install
 
 To install it you must install the dependencies. Then, you can install the package with the following command
