@@ -11,9 +11,9 @@ with open('./README.md', 'r', encoding='utf-8') as fh:
 
 REQUIREMENTS = [
     'numpy>=1.23.5',
-    'tensorflow>=2.12.0',
-    'matplotlib>=3.7.1',
-    'pandas>=2.0.0',
+    'tensorflow>=2.11.0',
+    'matplotlib>=3.6.3',
+    'pandas>=1.5.3',
     'slackclient>=2.9.3',
 ]
 
