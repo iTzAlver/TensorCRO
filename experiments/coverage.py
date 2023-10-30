@@ -6,16 +6,21 @@
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 # Import statements:
 import logging
+import os
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+from other_algorithms import GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm, SimulatedAnnealingAlgorithm
 from tensorcro import TensorCro, UniformCrossover, MultipointCrossover, HarmonySearch, \
-    RandomSearch, ComposedSubstrate, Mutation, BLXAlphaCrossover
-from tensorcro.replay.slack_callback import SlackCallback
+    RandomSearch, ComposedSubstrate, Mutation, BLXAlphaCrossover, SlackCallback
 from coverage_problem import csv_to_numpy, format_array, conv2d
-MAP_PATH = "./coverage_problem/points.csv"
+logging.basicConfig(level=logging.INFO)
+MAP_PATH = [f"./coverage_problem/points_{_}.csv" for _ in range(1, 4)]
 DEVICE_PATH = "./coverage_problem/gen5.csv"
 SLACK_TOKEN = ''
+ALGORITHMS = [GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm, SimulatedAnnealingAlgorithm]
+TIME_LIMIT = 60 * 80
+SEEDS = [2023, 2024, 2025]
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
@@ -205,52 +210,79 @@ class Fitness:
 def main() -> None:
     logging.info("[+] Connected to Coverage Problem.")
 
-    # Slack callback:
-    slack_callback = SlackCallback(SLACK_TOKEN, '#tensor-cro-dev', 'Alverciito',
-                                   simulation_name='Coverage Problem (Scenario 1)')
+    for map_path in MAP_PATH:
+        # Sim number:
+        sim_number = map_path[-5]
 
-    # Load csv file:
-    coordinates, is_position, coverage_boolean, distance, cost = format_array(*csv_to_numpy(MAP_PATH, DEVICE_PATH))
-    fitness_function = Fitness(coordinates, is_position, coverage_boolean, distance, cost, framework='numpy')
-    logging.info(f"[!] Fitness built successfully. Setting up TensorCro...")
+        # Load csv file:
+        coordinates, is_position, coverage_boolean, distance, cost = format_array(*csv_to_numpy(map_path, DEVICE_PATH))
+        fitness_function = Fitness(coordinates, is_position, coverage_boolean, distance, cost, framework='numpy')
+        logging.info(f"[!] Fitness built successfully. Setting up TensorCro...")
 
-    # [!] Set up TensorCro:
+        # [!] Set up TensorCro:
 
-    # - Main parameters:
-    n_dims = len(fitness_function.device_coordinates)
-    directives = tf.convert_to_tensor([[fitness_function.bounds[0]] * n_dims,
-                                       [fitness_function.bounds[1]] * n_dims],
-                                      dtype_hint=tf.float32)
-    reef_shape = (40, 50)
+        # - Main parameters:
+        n_dims = len(fitness_function.device_coordinates)
+        directives = tf.convert_to_tensor([[fitness_function.bounds[0]] * n_dims,
+                                           [fitness_function.bounds[1]] * n_dims],
+                                          dtype_hint=tf.float32)
+        reef_shape = (40, 50)
 
-    # - Substrates:
-    uniform_crossover = UniformCrossover()
-    harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.1, bandwidth=0.05, directives=directives)
-    random_search = RandomSearch(directives, 0.2)
-    genetic_algorithm = ComposedSubstrate(MultipointCrossover([n_dims // 2]),
-                                          Mutation('gaussian', mean=0.0, stddev=0.05),
-                                          name='GeneticAlgorithm')
-    blxa = BLXAlphaCrossover(directives, 0.2)
-    subs = [uniform_crossover, harmony_search, random_search, genetic_algorithm, blxa]
+        # - Substrates:
+        uniform_crossover = UniformCrossover()
+        harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.1, bandwidth=0.05, directives=directives)
+        random_search = RandomSearch(directives, 0.2)
+        genetic_algorithm = ComposedSubstrate(MultipointCrossover([n_dims // 2]),
+                                              Mutation('gaussian', mean=0.0, stddev=0.05),
+                                              name='GeneticAlgorithm')
+        blxa = BLXAlphaCrossover(directives, 0.2)
+        subs = [uniform_crossover, harmony_search, random_search, genetic_algorithm, blxa]
 
-    # - TensorCro:
-    t_cro = TensorCro(reef_shape, subs=subs)
+        # - TensorCro:
+        t_cro = TensorCro(reef_shape, subs=subs)
 
-    # - Fit:
-    logging.info(f"[!] TensorCro built successfully. Starting optimization...")
-    try:
-        best = t_cro.fit(fitness_function, directives, max_iter=5, device='/CPU:0', seed=0, shards=5,
-                         save=True, time_limit=1*3600, callback=slack_callback, tf_compile=False)
-    except Exception as ex:
-        slack_callback.exception_handler(ex)
-        raise ex
-    slack_callback.end(best[0].numpy())
-    np.save('./best_solutions.npy', best[0])
-    logging.info(f'[!] Optimization finished. Best individual: {best}')
+        # - Fit:
+        logging.info(f"[!] TensorCro built successfully. Starting optimization...")
+        for seed in SEEDS:
+            if not os.path.exists(f'./best_solutions_{seed}_{sim_number}.npy'):
+                logging.info(f"[!] Starting TensorCro: {seed}:{sim_number}...")
+                slack_callback = SlackCallback(SLACK_TOKEN, '#tensor-cro-dev', 'Alverciito',
+                                               simulation_name=f'Coverage Problem (Scenario {sim_number})')
+                try:
+                    best = t_cro.fit(fitness_function, directives, max_iter=5000, device='/GPU:0', seed=seed,
+                                     shards=100, save=False, time_limit=TIME_LIMIT, callback=slack_callback)
+                except Exception as ex:
+                    slack_callback.exception_handler(ex)
+                    raise ex
+                slack_callback.end(best[0].numpy())
+                np.save(f'./best_solutions_{seed}_{sim_number}.npy', best[0])
+                np.save(f'./best_fitness_{seed}_{sim_number}.npy', best[1].numpy())
+                logging.info(f'[!] Optimization finished. Best individual: {best}')
 
-    # - Plot:
-    fitness_function.plot_solution(best[0], save=True, path='./optimization.png')
-    logging.info("[-] Disconnected from Coverage Problem.")
+                # - Plot:
+                fitness_function.plot_solution(best[0], save=True, path=f'./optimization_{seed}.png')
+
+            # - Other algorithms:
+            for algorithm in ALGORITHMS:
+                if not os.path.exists(f'./best_solutions_{algorithm.__name__}_{seed}_{sim_number}.npy'):
+                    logging.info(f"[!] Starting {algorithm.__name__}: {seed}:{sim_number}...")
+                    try:
+                        if algorithm is not SimulatedAnnealingAlgorithm:
+                            ai = algorithm(200)
+                        else:
+                            ai = algorithm()
+                        # We run the algorithm:
+                        best_ind, best_fit = ai.fit(fitness_function, directives.numpy(), int(1e10),
+                                                    time_limit=TIME_LIMIT, seed=seed)
+                    except Exception as ex:
+                        logging.error(f"[!] {algorithm.__name__} failed.")
+                        raise ex
+                    np.save(f'./best_solutions_{algorithm.__name__}_{seed}_{sim_number}.npy', best_ind)
+                    np.save(f'./best_fitness_{algorithm.__name__}_{seed}_{sim_number}.npy', best_fit)
+                    fitness_function.plot_solution(best_ind[0], save=True, path=f'./optimization_{algorithm.__name__}_'
+                                                                                f'{seed}.png')
+                    logging.info(f'[!] Optimization finished. Best fitness: {best_fit}')
+        logging.info("[-] Disconnected from Coverage Problem.")
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #

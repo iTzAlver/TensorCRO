@@ -47,15 +47,18 @@ ALGORITHMS = [TensorCro, GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm,
 DIMENSIONS = [5, 20, 50, 200, 350, 500]
 DIMENSIONS.reverse()
 RESULTS_PATH = './results/'
-TIME_LIMIT = 300
-# TIME_LIMIT_OLD = 100
-# DIMENSIONS_OLD = [5, 20, 50, 200, 500]
+TIME_LIMIT = 100
+TIME_LIMIT_GPU_CPU = 300
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        FUNCTION DEF                       #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 def run_tests() -> None:
+    # We run the test 1 for the article:
+    logging.info('[+] Connected to Test 1:')
+    test_1()
+    logging.info('[-] Disconnected to Test 1.\n\n')
     # # We run the test 2 for the article:
     # logging.info('[+] Connected to Test 2:')
     # test_2()
@@ -68,10 +71,6 @@ def run_tests() -> None:
     # logging.info('[+] Connected to Test 4:')
     # test_4()
     # logging.info('[-] Disconnected to Test 4.\n\n')
-    # We run the test 1 for the article:
-    logging.info('[+] Connected to Test 1:')
-    test_1()
-    logging.info('[-] Disconnected to Test 1.\n\n')
 
 
 def test_1() -> None:
@@ -251,7 +250,7 @@ def test_3() -> None:
                             ai = TensorCro(reef_shape=(5, dimension * 4), subs=subs)
                             # Run the algorithm:
                             best_ind, best_fit = ai.fit(test_function_instance, bounds, device=device,
-                                                        max_iter=int(1e6), save=False, time_limit=TIME_LIMIT,
+                                                        max_iter=int(1e6), save=False, time_limit=TIME_LIMIT_GPU_CPU,
                                                         seed=seed, shards=None, minimize=True)
                             tok = time.perf_counter()
                             # We convert the results to list if they are not:

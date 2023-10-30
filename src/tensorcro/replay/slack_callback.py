@@ -290,14 +290,15 @@ class SlackCallback:
             self.last_best_fitness = self.current_shard
             self.last_best_pop = args[0].numpy()
         # Create fitness plot.
-        plt.plot(self.fitness_history, color='blue', linewidth=1.5, linestyle='solid', marker='o')
-        plt.title(f'Fitness function ({self.current_shard} shards)')
-        plt.xlabel('Shards')
-        plt.xticks(np.arange(0, self.current_shard, 1))
-        plt.ylabel('Fitness')
-        plt.grid(True)
-        plt.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
-        plt.savefig('./fitness_tmp.png')
+        fig = plt.figure()
+        fig.plot(self.fitness_history, color='blue', linewidth=1.5, linestyle='solid', marker='o')
+        fig.title(f'Fitness function ({self.current_shard} shards)')
+        fig.xlabel('Shards')
+        fig.xticks(np.arange(0, self.current_shard, 1))
+        fig.ylabel('Fitness')
+        fig.grid(True)
+        fig.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
+        fig.savefig('./fitness_tmp.png')
         # Create block.
         block = {
             "blocks": [
@@ -354,6 +355,7 @@ class SlackCallback:
             return True
         except Exception as e:
             logging.error(f'[SlackBot] Error sending message to slack: {e}')
+            self.last_message = None
             return False
 
 
