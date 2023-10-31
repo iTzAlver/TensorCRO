@@ -10,6 +10,8 @@ import time
 import numpy as np
 import logging
 import tensorflow as tf
+# Coverage problem:
+from coverage import main as coverage_problem
 # Algorithms:
 from tensorcro import TensorCro, UniformCrossover, MultipointCrossover, HarmonySearch, RandomSearch, \
     ComposedSubstrate, Mutation, DifferentialSearch
@@ -59,11 +61,11 @@ def run_tests() -> None:
     logging.info('[+] Connected to Test 1:')
     test_1()
     logging.info('[-] Disconnected to Test 1.\n\n')
-    # # We run the test 2 for the article:
-    # logging.info('[+] Connected to Test 2:')
-    # test_2()
-    # logging.info('[-] Disconnected to Test 2.\n\n')
-    # # We run the test 3 for the article:
+    # We run the test 2 for the article:
+    logging.info('[+] Connected to Test 2:')
+    test_2()
+    logging.info('[-] Disconnected to Test 2.\n\n')
+    # We run the test 3 for the article:
     logging.info('[+] Connected to Test 3:')
     test_3()
     logging.info('[-] Disconnected to Test 3.\n\n')
@@ -163,44 +165,15 @@ def test_1() -> None:
                                          f'{best_ind[0]}')
 
 
-# def test_2() -> None:
-#     # We run the test 2 with the following parameters:
-#     # - Seed number:            2023
-#     # - Number of iterations:   10_000 fitness evaluations.
-#     # - Number of individuals:  Dimension dependent: 20 times the dimension.
-#     # - Number of dimensions:   Variable.
-#     # - Function:               All implemented functions.
-#     # - Algorithms:             All implemented algorithms.
-#     for algorithm in ALGORITHMS:
-#         for function_type, function_list in FUNCTIONS.items():
-#             for test_function in function_list:
-#                 for dimension in DIMENSIONS:
-#                     # Run the algorithm:
-#                     if algorithm is not SimulatedAnnealingAlgorithm:
-#                         ai = algorithm(20 * dimension)
-#                     else:
-#                         ai = algorithm()
-#                     # We run the algorithm:
-#                     test_function_instance = test_function()
-#                     core_bounds = test_function_instance.bounds
-#                     bounds = np.array([core_bounds] * dimension).T
-#                     best_ind, best_fit = ai.fit(test_function_instance, bounds, -1, seed=SEED)
-#                     # Save the results:
-#                     with open(RESULTS_PATH + 'test_2.json', 'a') as f:
-#                         json.dump({'algorithm': algorithm.__name__,
-#                                    'function': test_function.__name__,
-#                                    'dimension': dimension,
-#                                    'best_fit': float(best_fit),
-#                                    'best_ind': list(best_ind),
-#                                    'num_eval': test_function_instance.number_of_evaluations}, f, indent=4)
-#                         f.write('\n')
-#                     # Logging:
-#                     logging.info(f'Test 2: Algorithm: {algorithm.__name__}, Function: {test_function.__name__}:'
-#                                  f'{test_function_instance.number_of_evaluations} eval, '
-#                                  f'Dimension: {dimension}, Best fitness: {best_fit[0]}, Best individual:
-#                                  {best_ind[0]}')
-#
-#
+def test_2() -> None:
+    """
+    This test case runs the coverage problem. It is a fundamental test case for the article.
+    :return: None
+    """
+    # Run coverage problem:
+    coverage_problem()
+
+
 def test_3() -> None:
     # We run the test 2 with the following parameters:
     # - Seed number:            2023
