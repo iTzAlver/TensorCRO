@@ -19,7 +19,7 @@ FUNC = {
 #                        MAIN CLASS                         #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class Mutation(CROSubstrate):
-    def __init__(self, directives: tf.Tensor, mutation_type: str, **kwargs):
+    def __init__(self, mutation_type: str, directives: tf.Tensor = None, **kwargs):
         """
         Mutation class. It is a CROSubstrate that applies a mutation to the individuals. The supported mutation types
         are:
@@ -37,8 +37,10 @@ class Mutation(CROSubstrate):
                              f"\nSupported types: {list(FUNC.keys())}")
         self.func = FUNC[mutation_type]
         self.arguments = kwargs
-        if not isinstance(directives, tf.Tensor):
+        if not isinstance(directives, tf.Tensor) and directives is not None:
             directives = tf.convert_to_tensor(directives)
+        elif directives is None:
+            directives = tf.constant([0., 1.])
         self.directives = directives
 
     def _call(self, individuals: tf.Tensor, **kwargs) -> tf.Tensor:
