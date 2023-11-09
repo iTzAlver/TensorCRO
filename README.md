@@ -93,6 +93,10 @@ require fitness evaluations.
 1. Implemented SlackBot, a real-time monitoring tool for TensorCRO and
 backup tool for the results.
 
+### 2.2.0
+1. Now Mutation is normalized to the range of the parameter specs.
+2. Installation bug fixing (tmp not included for warch replay)
+
 ## Install
 
 To install it you must install the dependencies. Then, you can install the package with the following command

@@ -19,7 +19,7 @@ FUNC = {
 #                        MAIN CLASS                         #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class Mutation(CROSubstrate):
-    def __init__(self, mutation_type: str, **kwargs):
+    def __init__(self, directives: tf.Tensor, mutation_type: str, **kwargs):
         """
         Mutation class. It is a CROSubstrate that applies a mutation to the individuals. The supported mutation types
         are:
@@ -28,6 +28,7 @@ class Mutation(CROSubstrate):
             - truncated_normal (truncated normal): tf.random.truncated_normal
             - poisson (poisson): tf.random.poisson
             - gamma (gamma): tf.random.gamma
+        :param directives: Parameter specifications.
         :param mutation_type: Mutation type as a string.
         :param kwargs: Arguments for the mutation function.
         """
@@ -36,10 +37,14 @@ class Mutation(CROSubstrate):
                              f"\nSupported types: {list(FUNC.keys())}")
         self.func = FUNC[mutation_type]
         self.arguments = kwargs
+        if not isinstance(directives, tf.Tensor):
+            directives = tf.convert_to_tensor(directives)
+        self.directives = directives
 
     def _call(self, individuals: tf.Tensor, **kwargs) -> tf.Tensor:
         mutation = self.func(tf.shape(individuals), dtype=tf.float32, **self.arguments)
-        return tf.math.add(individuals, mutation)
+        normalized_mutation = tf.math.multiply(mutation, self.directives[1] - self.directives[0])
+        return tf.math.add(individuals, normalized_mutation)
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        END OF FILE                        #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #

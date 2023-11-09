@@ -5,13 +5,15 @@
 #                                                           #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 from .slcro import TensorCro, TF_INF
-from .__special__ import __version__, __replay_path__
+from .__special__ import __version__, __replay_path__, __src_path__
 from .replay import watch_replay, SlackCallback
 from .substrates import UniformCrossover, GaussianCrossover, MaskedCrossover, MultipointCrossover, BLXAlphaCrossover, \
     ComposedSubstrate, Mutation, ParticleSwarmOptimization, SimulatedAnnealing
 from .substrates import HarmonySearch, RandomSearch, DifferentialSearch
 # Format file:
 import os
+if not os.path.exists(__src_path__ + '/tmp'):
+    os.mkdir(__src_path__ + '/tmp')
 if not os.path.exists(__replay_path__):
     os.mkdir(__replay_path__)
 if not os.path.exists(__replay_path__ + '/replay'):
