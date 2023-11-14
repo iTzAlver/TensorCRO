@@ -97,6 +97,10 @@ backup tool for the results.
 1. Now Mutation is normalized to the range of the parameter specs.
 2. Installation bug fixing (tmp not included for warch replay)
 
+### 2.2.2
+1. Solved fig bug for slackbot.
+
+
 ## Install
 
 To install it you must install the dependencies. Then, you can install the package with the following command

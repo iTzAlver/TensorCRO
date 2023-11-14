@@ -290,14 +290,14 @@ class SlackCallback:
             self.last_best_fitness = self.current_shard
             self.last_best_pop = args[0].numpy()
         # Create fitness plot.
-        fig = plt.figure()
-        fig.plot(self.fitness_history, color='blue', linewidth=1.5, linestyle='solid', marker='o')
-        fig.title(f'Fitness function ({self.current_shard} shards)')
-        fig.xlabel('Shards')
-        fig.xticks(np.arange(0, self.current_shard, 1))
-        fig.ylabel('Fitness')
-        fig.grid(True)
-        fig.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
+        fig, ax = plt.subplots()  # Create a figure and axis
+        ax.plot(self.fitness_history, color='blue', linewidth=1.5, linestyle='solid', marker='o')
+        ax.set_title(f'Fitness function ({self.current_shard} shards)')
+        ax.set_xlabel('Shards')
+        ax.set_xticks(np.arange(0, self.current_shard, 1))
+        ax.set_ylabel('Fitness')
+        ax.grid(True)
+        ax.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
         fig.savefig('./fitness_tmp.png')
         # Create block.
         block = {
