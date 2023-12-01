@@ -11,8 +11,8 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from other_algorithms import GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm, SimulatedAnnealingAlgorithm
-from tensorcro import TensorCro, UniformCrossover, MultipointCrossover, HarmonySearch, \
-    RandomSearch, ComposedSubstrate, Mutation, BLXAlphaCrossover, SlackCallback
+from tensorcro import TensorCro, UniformCrossover, ParticleSwarmOptimization, HarmonySearch, SimulatedAnnealing, \
+    RandomSearch, ComposedSubstrate, Mutation, SlackCallback
 from windfarm_problem import fitness_tf, TurbineParameters, WindParameters
 logging.basicConfig(level=logging.INFO)
 SLACK_TOKEN = ''
@@ -30,23 +30,36 @@ class Fitness:
         """
         self.dmin = tf.constant(dmin, dtype=tf.float32)
 
-    def plot_solution(self, individual: (tf.Tensor, np.array), save: bool = False,
+    def plot_solution(self, individual: (tf.Tensor, np.array), diam: int, save: bool = False,
                       path: str = './optimization.png') -> None:
         """
         Plots the solution of the problem.
         :param individual: Polar coordinates of the turbines.
+        :param diam: Diameter of the wind farm.
         :param save: Whether to save the plot or not.
         :param path: Path to save the plot.
         :return: Nothing.
         """
         # We transform the polar coordinates to cartesian:
-        cartesian_coords = self.polar_to_cartesian(individual).numpy()
+        if isinstance(individual, np.ndarray):
+            cartesian_coords = self.polar_to_cartesian(tf.convert_to_tensor(individual, dtype_hint=tf.float32)).numpy()
+        else:
+            cartesian_coords = self.polar_to_cartesian(individual).numpy()
+        cartesian_coords = cartesian_coords[0].T
         # We plot the solution:
         plt.figure(figsize=(10, 10))
-        plt.scatter(cartesian_coords[..., 0], cartesian_coords[..., 1])
-        plt.xlim(-WindParameters.park_diam[-1] / 2, WindParameters.park_diam[-1] / 2)
-        plt.ylim(-WindParameters.park_diam[-1] / 2, WindParameters.park_diam[-1] / 2)
-        plt.title(f'Wind Farm Problem (Scenario {WindParameters.park_diam[-1]}m)')
+        plt.scatter(cartesian_coords[:, 0], cartesian_coords[:, 1], s=100, c='r', marker='x')
+        plt.xlim(-1.1 * diam, 1.1 * diam)
+        plt.ylim(-1.1 * diam, 1.1 * diam)
+        plt.title(f'Wind Farm Problem (Scenario {diam}m)')
+        # Plot a big circle:
+        circle = plt.Circle((0, 0), diam, color='k', fill=False, linestyle='--')
+        plt.gcf().gca().add_artist(circle)
+        # Plot a circle with center each individual:
+        for i in range(cartesian_coords.shape[0]):
+            circle = plt.Circle((cartesian_coords[i, 0], cartesian_coords[i, 1]), self.dmin / 2, color='b',
+                                fill=False, linestyle='--')
+            plt.gcf().gca().add_artist(circle)
         if save:
             plt.savefig(path)
         else:
@@ -87,8 +100,7 @@ class Fitness:
         distances = tf.linalg.set_diag(distances, tf.ones(shape=(tf.shape(distances)[:-1]), dtype=tf.float32) *
                                        2 * self.dmin)
         # Add penalty if there are turbines too close
-        penalty = tf.reduce_sum(tf.where(distances < self.dmin, 1e10 + 1e5 * tf.math.exp(1.0 - distances / self.dmin),
-                                         0.0), axis=-1)
+        penalty = tf.reduce_sum(tf.where(distances < self.dmin, 1e20, 0.0), axis=-1)
         penalty = tf.reduce_sum(penalty, axis=-1)
         # [2] We calculate the fitness value:
         windfram_power = fitness_tf(tf.convert_to_tensor(cartesian_pop, dtype_hint=tf.float32))
@@ -114,17 +126,17 @@ def main() -> None:
         concatenated_max = np.concatenate([first_half, second_half])
         concatenated_min = np.array([0] * (2 * nturb))
         directives = tf.convert_to_tensor([concatenated_min, concatenated_max], dtype_hint=tf.float32)
-        reef_shape = (50, 50)
+        reef_shape = (200, 50)
 
         # - Substrates:
-        uniform_crossover = UniformCrossover()
+        pso = ParticleSwarmOptimization(directives, shape=(reef_shape[0], reef_shape[1] // 5))
         harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.1, bandwidth=0.05, directives=directives)
         random_search = RandomSearch(directives, 0.2)
-        genetic_algorithm = ComposedSubstrate(MultipointCrossover([nturb]),
+        genetic_algorithm = ComposedSubstrate(UniformCrossover(),
                                               Mutation('gaussian', mean=0.0, stddev=0.05),
                                               name='GeneticAlgorithm')
-        blxa = BLXAlphaCrossover(directives, 0.2)
-        subs = [uniform_crossover, harmony_search, random_search, genetic_algorithm, blxa]
+        simulated_annealing = SimulatedAnnealing(directives, shape=(reef_shape[0], reef_shape[1] // 5))
+        subs = [pso, harmony_search, random_search, genetic_algorithm, simulated_annealing]
 
         # - TensorCro:
         t_cro = TensorCro(reef_shape, subs=subs)
@@ -137,10 +149,12 @@ def main() -> None:
                 slack_callback = SlackCallback(SLACK_TOKEN, '#tensor-cro-dev', 'Alverciito',
                                                simulation_name=f'Wind Farm Problem (Scenario {dmax}m)')
                 try:
-                    best = t_cro.fit(fitness_function, directives, max_iter=5000, device='/CPU:0', seed=seed,
-                                     shards=5000, save=False, time_limit=TIME_LIMIT,
+                    best = t_cro.fit(fitness_function, directives, max_iter=10, device='/GPU:0', seed=seed,
+                                     shards=10, save=False, time_limit=TIME_LIMIT,
                                      # callback=slack_callback,
                                      minimize=False)
+                    fitness_function.plot_solution(best[0], int(dmax), save=True,
+                                                   path=f'./optimization_tensorcro_{seed}.png')
                 except Exception as ex:
                     slack_callback.exception_handler(ex)
                     raise ex
