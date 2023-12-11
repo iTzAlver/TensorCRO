@@ -180,10 +180,10 @@ def main() -> None:
         concatenated_max = np.concatenate([first_half, second_half])
         concatenated_min = np.array([0] * (2 * nturb))
         directives = tf.convert_to_tensor([concatenated_min, concatenated_max], dtype_hint=tf.float32)
-        reef_shape = (20, 50)
 
         # - Substrates:
         nsubs = 5
+        reef_shape = (40, nsubs * 2)
         pso = ParticleSwarmOptimization(directives, shape=(reef_shape[0], reef_shape[1] // nsubs))
         harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.1, bandwidth=0.05, directives=directives)
         random_search = RandomSearch(directives, 0.2)
