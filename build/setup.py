@@ -12,6 +12,7 @@ with open('./README.md', 'r', encoding='utf-8') as fh:
 REQUIREMENTS = [
     'numpy>=1.23.5',
     'tensorflow>=2.11.0',
+    'tensorflow-probability>=0.22.0',
     'matplotlib>=3.6.3',
     'pandas>=1.5.3',
     'slackclient>=2.9.3',
@@ -20,7 +21,7 @@ REQUIREMENTS = [
 
 setuptools.setup(
     name='tensorcro',
-    version='2.2.2',
+    version='2.3.0',
     author='Palomo-Alonso, Alberto',
     author_email='a.palomo@edu.uah',
     description='TensorCRO: A Tensorflow-based implementation of the Coral Reef Optimization algorithm.',

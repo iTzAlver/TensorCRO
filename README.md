@@ -100,6 +100,17 @@ backup tool for the results.
 ### 2.2.2
 1. Solved fig bug for slackbot.
 
+### 2.3.0
+* Adding new algorithms as substrates:
+1. EDA substrate added.
+2. Energy reduction substrate added.
+3. Energy augmentation substrate added.
+4. Piece loss substrate added.
+5. Piece gain substrate added.
+6. Coordinate descent substrate added.
+7. Added permutation crossover substrate.
+* Added new callback for fitness tracing.
+
 
 ## Install
 

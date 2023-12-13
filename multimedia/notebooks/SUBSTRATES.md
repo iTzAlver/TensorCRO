@@ -8,11 +8,15 @@ Crossovers:
 3. [Uniform](#uniform)
 4. [Masked](#masked)
 5. [Multipoint](#multipoint)
+6. [Permutation](#permutation)
 
 Algorithms:
 1. [Differential Evolution](#differential)
 2. [Harmony Search](#harmony)
 3. [Random Search](#random)
+4. [Estimation of Distribution](#eda)
+5. [Piece loss/gain and energy loss/gain](#piece)
+6. [Coordinate Descent](#cd)
 
 Mutations:
 1. [Gaussian](#gaussian)
@@ -67,6 +71,11 @@ composed of the points of the first parent in the positions indicated by the mas
 second parent in the positions not indicated by the mask.
 - :points: List of indices where the points between the parents are swapped.
 
+## Permutation <a name="permutation"></a>
+The PermutationCrossover class implements a permutation crossover. The points is a list of indices where
+the points between the parents are swapped. The mask is applied to each parent, so the offspring will be
+composed of the points of the partents but the parameters of the sections are randomly permuted.
+
 # Algorithms:
 
 ## Differential Evolution <a name="differential"></a>
@@ -115,6 +124,43 @@ within the search space.
 - :directives: Parameter specifications.
 - :size: Size of the new population (float or int). If float, it is the percentage of the original
 population and if int, it is the number of new individuals.
+
+## Estimation of Distribution <a name="eda"></a>
+This class implements the EstimationDistribution algorithm. It is a simple algorithm that generates random individuals
+within the search space. It uses a Binomial distribution to generate new individuals.
+
+- :directives: Parameter specifications.
+- :init_prob: The initial probability of the binomial distribution.
+- :lr: The learning rate of the binomial distribution.
+- :proportion: The proportion of the population to be used to estimate the parameters.
+- :top_select: The number of individuals to be used to estimate the parameters.
+- :param dist: The distribution to be used. Binomial by default.
+
+## Piece loss/gain and energy loss/gain <a name="piece"></a>
+This class implements the Piece loss/gain and energy loss/gain algorithm. 
+It is a simple algorithm that reduces or augments by a selected value randomly selected parameters of the population.
+It adds or subtract alpha to random selected parameters.
+
+- :directives: Parameter specifications.
+- :alpha: Decrement value.
+- :nmute: Number of parameters to reduce in mean.
+- :loss: Whether to add or subtract the mutation.
+
+## Energy reduction/augmentation <a name="piece"></a>
+This class implements the Energy reduction/augmentation algorithm.
+It is a simple algorithm that reduces or augments by a selected value randomly selected parameters of the population.
+It multiply or divide alpha to random selected parameters.
+It acts according to the cross-correlation of the parameters, as a gradient descent.
+
+- :alpha: The initial value of the decrement.
+- :likelihood: The initial likelihood of the individuals to be repeated.
+
+## Coordinate Descent <a name="cd"></a>
+This class implements the Coordinate Descent algorithm. It selects a random parameter and generates a new
+population with all the possible values of that parameter, separated by a step size, epsilon.
+
+- :directives: Parameter specifications.
+- :epsilon: The increment of the parameters in the new search space.
 
 # Mutations:
 
@@ -180,3 +226,4 @@ there is an alive coral in that spot.
 4. [Random Search](https://www.tandfonline.com/doi/abs/10.1080/01621459.1953.10501200)
 5. [Particle Swarm Optimization](https://ieeexplore.ieee.org/document/488968)
 6. [Simulated Annealing](https://www.mit.edu/~dbertsim/papers/Optimization/Simulated%20annealing.pdf)
+7. [Estimation of Distribution](https://www.researchgate.net/publication/220529421_Estimation_of_Distribution_Algorithms_A_New_Tool_for_Evolutionary_Computation)

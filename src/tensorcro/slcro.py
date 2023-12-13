@@ -335,7 +335,6 @@ class TensorCro:
         :param spawners: A list of reefs to perform the crossover operation on.
         :param fitness: A list of fitness values for each spawner.
         :param ids: A list of ids for each spawner.
-        :param reef_shape: The shape of the reef.
         :return: A tensor with the result of the crossover operation.
         """
         crossover = list()
