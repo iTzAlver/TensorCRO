@@ -97,6 +97,21 @@ backup tool for the results.
 1. Now Mutation is normalized to the range of the parameter specs.
 2. Installation bug fixing (tmp not included for warch replay)
 
+### 2.2.2
+1. Solved fig bug for slackbot.
+
+### 2.3.0
+* Adding new algorithms as substrates:
+1. EDA substrate added.
+2. Energy reduction substrate added.
+3. Energy augmentation substrate added.
+4. Piece loss substrate added.
+5. Piece gain substrate added.
+6. Coordinate descent substrate added.
+7. Added permutation crossover substrate.
+* Added new callback for fitness tracing.
+
+
 ## Install
 
 To install it you must install the dependencies. Then, you can install the package with the following command

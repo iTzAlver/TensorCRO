@@ -6,7 +6,7 @@
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 from .slcro import TensorCro, TF_INF
 from .__special__ import __version__, __replay_path__, __src_path__
-from .replay import watch_replay, SlackCallback
+from .replay import watch_replay, SlackCallback, LightCallback
 from .substrates import UniformCrossover, GaussianCrossover, MaskedCrossover, MultipointCrossover, BLXAlphaCrossover, \
     ComposedSubstrate, Mutation, ParticleSwarmOptimization, SimulatedAnnealing
 from .substrates import HarmonySearch, RandomSearch, DifferentialSearch

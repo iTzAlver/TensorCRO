@@ -6,6 +6,7 @@
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 from .watch_replay import watch_replay
 from .slack_callback import SlackCallback
+from .light_callback import LightCallback
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        END OF FILE                        #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
