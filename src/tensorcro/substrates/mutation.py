@@ -46,7 +46,8 @@ class Mutation(CROSubstrate):
     def _call(self, individuals: tf.Tensor, **kwargs) -> tf.Tensor:
         mutation = self.func(tf.shape(individuals), dtype=tf.float32, **self.arguments)
         normalized_mutation = tf.math.multiply(mutation, self.directives[1] - self.directives[0])
-        return tf.math.add(individuals, normalized_mutation)
+        mutated_individuals = tf.math.add(individuals, normalized_mutation)
+        return tf.clip_by_value(mutated_individuals, self.directives[0], self.directives[1])
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        END OF FILE                        #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #

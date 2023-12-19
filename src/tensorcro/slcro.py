@@ -118,6 +118,7 @@ class TensorCro:
             seed = tf.random.uniform((1,), minval=0, maxval=2147483647, dtype=tf.int32)
         self.seed = int(seed)
         tf.random.set_seed(self.seed)
+        np.random.seed(self.seed)
         # Set up shards and initial population:
         if shards is None:
             shards = max_iter
@@ -148,15 +149,19 @@ class TensorCro:
             self.__fit = self._fit
         # Using the selected device:
         with tf.device(device):
-            # __progress_bar = tf.keras.utils.Progbar(max_iter // shards)
             __progress_bar = tf.keras.utils.Progbar(shards)
             __p = None
             __progress_bar.update(0)
             for _ in range(shards):
-                rf = self.__fit(_fitness_function, individual_directives, max_iter // shards, rf, reverse=reverse)
+                # Call to tf.fit method:
+                arguments = (_fitness_function, individual_directives, max_iter // shards, rf, reverse)
+                rf = self.__fit(*arguments)
                 reef, fitness = rf
+                # Reverse if the fitness is minimizing:
                 fitness *= reverse
+                # Update progress bar:
                 __progress_bar.update(_ + 1, values=[('Best fitness', tf.reduce_max(fitness))])
+                # Save and monitor:
                 if save:
                     _fitness = tf.where(tf.math.is_finite(fitness), fitness, TF_INF)
                     self.__save_replay(reef, _fitness)
@@ -164,12 +169,14 @@ class TensorCro:
                     if __p is not None:
                         __p.terminate()
                     __p = self.watch_replay()
+                # Upper level callback call:
                 if callback is not None:
                     callback(tf.gather(tf.reshape(reef, (-1, tf.shape(individual_directives)[-1])),
                                        tf.argsort(tf.reshape(fitness, (-1,)), direction=direction)),
                              tf.gather(tf.reshape(fitness, (-1,)), tf.argsort(tf.reshape(fitness, (-1,)),
                                                                               direction=direction)),
                              shards)
+                # Time/evaluation limit break:
                 if time_limit:
                     tok = time.perf_counter()
                     if tok - tik > time_limit:
@@ -177,6 +184,7 @@ class TensorCro:
                 if evaluation_limit:
                     if fitness_function.number_of_evaluations > evaluation_limit:
                         break
+            # Sort and return:
             sorted_reef = tf.gather(tf.reshape(reef, (-1, tf.shape(individual_directives)[-1])),
                                     tf.argsort(tf.reshape(fitness, (-1,)), direction=direction))
             __progress_bar.update(shards, values=[('Best fitness', tf.reduce_max(fitness))], finalize=True)

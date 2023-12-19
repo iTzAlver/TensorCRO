@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: tensorcro
-Version: 2.3.0
+Version: 2.3.1
 Summary: TensorCRO: A Tensorflow-based implementation of the Coral Reef Optimization algorithm.
 Home-page: https://github.com/iTzAlver/tensorcro.git
 Author: Palomo-Alonso, Alberto
@@ -18,7 +18,7 @@ Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: numpy>=1.23.5
-Requires-Dist: tensorflow>=2.11.0
+Requires-Dist: tensorflow>=2.14.0
 Requires-Dist: tensorflow-probability>=0.22.0
 Requires-Dist: matplotlib>=3.6.3
 Requires-Dist: pandas>=1.5.3
@@ -138,6 +138,13 @@ backup tool for the results.
 6. Coordinate descent substrate added.
 7. Added permutation crossover substrate.
 * Added new callback for fitness tracing.
+
+### 3.2.1
+1. Major bug fixing.
+2. Module access bug fixing.
+3. Updated to stable version.
+4. Permutation not working on compile, set up as experimental.
+5. Mutation bug fix, clipping output.
 
 
 ## Install

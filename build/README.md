@@ -111,6 +111,13 @@ backup tool for the results.
 7. Added permutation crossover substrate.
 * Added new callback for fitness tracing.
 
+### 3.2.1
+1. Major bug fixing.
+2. Module access bug fixing.
+3. Updated to stable version.
+4. Permutation not working on compile, set up as experimental.
+5. Mutation bug fix, clipping output.
+
 
 ## Install
 

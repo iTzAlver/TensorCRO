@@ -8,7 +8,9 @@ from .slcro import TensorCro, TF_INF
 from .__special__ import __version__, __replay_path__, __src_path__
 from .replay import watch_replay, SlackCallback, LightCallback
 from .substrates import UniformCrossover, GaussianCrossover, MaskedCrossover, MultipointCrossover, BLXAlphaCrossover, \
-    ComposedSubstrate, Mutation, ParticleSwarmOptimization, SimulatedAnnealing
+    ComposedSubstrate, Mutation, ParticleSwarmOptimization, SimulatedAnnealing, EstimationDistribution, \
+    EnergyReduction, PieceLossGain, CROSubstrate, HarmonyMutation, CoordinateDescent
+from .substrates import PermutationCrossover as ExperimentalPermutationCrossover
 from .substrates import HarmonySearch, RandomSearch, DifferentialSearch
 # Format file:
 import os

@@ -13,22 +13,26 @@ from ..substrate import CROSubstrate
 #                        MAIN CLASS                         #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class CoordinateDescentSubstrate(CROSubstrate):
-    def __init__(self, bounds: tf.Tensor, epsilon: float = 1.):
+    def __init__(self, bounds: tf.Tensor, number_of_divs: int = 10):
         """
         This substrate is used to perform a coordinate descent. It searches for the best individual in each
         dimension, split by epsilon.
         :param bounds: The bounds of the individuals.
-        :param epsilon: The width of the coordinate descent.
+        :param number_of_divs: The number of divisions to perform in each dimension... Well, maybe we add one
+        more division to the upper bound to make sure that the upper bound is included, but just ignore it.
         """
         self.bounds = tf.constant(bounds, dtype=tf.float32)
-        self.width = tf.constant(epsilon, dtype=tf.float32)
+        self.width = tf.constant(number_of_divs, dtype=tf.float32)
         self.pointer = tf.Variable(initial_value=0, dtype=tf.int32)
 
     def _call(self, population: tf.Tensor, **kwargs) -> tf.Tensor:
         # Get the size of the population:
         current_point = population[0]
         # Create new individuals from each direction of the current point:
-        ranges = tf.range(self.bounds[0, self.pointer], self.bounds[1, self.pointer] + 1, self.width)
+        __lower = self.bounds[0, self.pointer]
+        __upper = self.bounds[1, self.pointer]
+        __diff = (__upper - __lower) / self.width
+        ranges = tf.range(__lower, __upper + __diff, __diff)
         # Tile individuals:
         individuals = tf.tile([current_point], (tf.shape(ranges)[0], 1))
         # Put zeros in the current pointer index:

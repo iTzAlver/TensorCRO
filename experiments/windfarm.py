@@ -11,65 +11,15 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from other_algorithms import GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm, SimulatedAnnealingAlgorithm
-from tensorcro import TensorCro, UniformCrossover, ParticleSwarmOptimization, HarmonySearch, SimulatedAnnealing, \
-    RandomSearch, ComposedSubstrate, Mutation, SlackCallback
-from tensorcro.substrates import CROSubstrate
+from tensorcro import TensorCro, MultipointCrossover, ParticleSwarmOptimization, HarmonySearch, SimulatedAnnealing, \
+    ComposedSubstrate, Mutation, LightCallback, CoordinateDescent
 from windfarm_problem import (fitness_tf, TurbineParameters, WindParameters)
 logging.basicConfig(level=logging.INFO)
-SLACK_TOKEN = 'xoxb-5951328403522-6081308292118-YvKWkLfSrLGMtEBskZ6ycbWE'
+# SLACK_TOKEN = 'xoxb-5951328403522-6081308292118-YvKWkLfSrLGMtEBskZ6ycbWE'
 ALGORITHMS = [GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm, SimulatedAnnealingAlgorithm]
 TIME_LIMIT = None
-SCBK = False
+SCBK = True
 SEEDS = [2023 + i for i in range(10)]
-
-
-# - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
-#                        FUNCTION DEF                       #
-# - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
-class RandomPermutation(CROSubstrate):
-    def __init__(self, section_points: int):
-        """
-        This substrate performs a random permutation of the parameters.
-        :param section_points: Section points of the parameters.
-        """
-        self.section_points = tf.constant(section_points, dtype=tf.int32)
-
-    def _call(self, individuals: tf.Tensor, **kwargs) -> tf.Tensor:
-        # Empty vector of shape [0, 2 * nturbines]:
-        permuted_shaped = None
-        # Permute individuals so we have a 2D tensor with each individual and its permuted parameters:
-        multip = tf.shape(individuals)[-1] // self.section_points
-        for individual in individuals:
-            # We create a permutation tensor:
-            permutation_tensor = tf.random.shuffle(tf.range(multip))
-            permutation_tensor = tf.cast(permutation_tensor, tf.float32)
-            permutation_tensor = tf.expand_dims(permutation_tensor, axis=0)
-            permutation_tensor = tf.tile(permutation_tensor, [self.section_points, 1])
-            # Reshape to [1, -1]:
-            permutation_tensor = tf.cast(tf.reshape(permutation_tensor, [1, -1]), tf.int32)
-            # Add [0, 0, 0, ...] until tf.shape[-1] // 2 and [1, 1, 1, 1, ...] until from tf.shape[-1] //
-            # 2 to tf.shape[-1]:
-            permutations_add = tf.concat([tf.zeros(shape=(1, multip), dtype=tf.int32), multip * tf.ones(
-                shape=(1, multip), dtype=tf.int32)], axis=-1)
-            # We add the values:
-            permutations = permutation_tensor + permutations_add
-            # We permute the individual:
-            individual_out_unshaped = tf.gather(individual, permutations, axis=-1)
-            # We append the individual to the list:
-            if permuted_shaped is not None:
-                permuted_shaped = tf.concat([permuted_shaped, individual_out_unshaped], axis=0)
-            else:
-                permuted_shaped = individual_out_unshaped
-        # Remove all the permutated elements that are the same that in the original individual:
-        repeated_index = tf.reduce_all(tf.equal(permuted_shaped, individuals), axis=-1)
-        # Choose only false values:
-        repeated_index = tf.logical_not(repeated_index)
-        # Get indices where true:
-        repeated_index = tf.where(repeated_index)
-        # We filter the individuals:
-        retval = tf.gather(individuals, repeated_index, axis=0)
-        # We return the individuals:
-        return tf.squeeze(retval)
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
@@ -183,37 +133,36 @@ def main() -> None:
 
         # - Substrates:
         nsubs = 5
-        reef_shape = (40, nsubs * 2)
+        nrows = 200 // (2 * nsubs)
+        reef_shape = (nrows, nsubs * 2)
         pso = ParticleSwarmOptimization(directives, shape=(reef_shape[0], reef_shape[1] // nsubs))
-        harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.1, bandwidth=0.05, directives=directives)
-        random_search = RandomSearch(directives, 0.2)
-        genetic_algorithm = ComposedSubstrate(UniformCrossover(),
-                                              Mutation('gaussian', mean=0.0, stddev=0.05),
+        harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.2, bandwidth=0.27, directives=directives)
+        coordinate_descent = CoordinateDescent(directives, number_of_divs=35)
+        genetic_algorithm = ComposedSubstrate(MultipointCrossover([directives.shape[-1] // 2]),
+                                              Mutation('gaussian', mean=0.0, stddev=0.27),
                                               name='GeneticAlgorithm')
         simulated_annealing = SimulatedAnnealing(directives, shape=(reef_shape[0], reef_shape[1] // nsubs))
-        rp = RandomPermutation(2)
-        subs = [pso, harmony_search, random_search, genetic_algorithm, simulated_annealing]
+        subs = [pso, harmony_search, genetic_algorithm, simulated_annealing, coordinate_descent]
 
         # - TensorCro:
         t_cro = TensorCro(reef_shape, subs=subs)
 
         # - Fit:
-        logging.info(f"[!] TensorCro built successfully. Starting optimization...")
+        logging.info(f"\n[!] TensorCro built successfully. Starting optimization...")
         for seed in SEEDS:
-            if not os.path.exists(f'./results/windfarm/best_solutions_{seed}_{dmax}m.npy'):
+            if not os.path.exists(f'./results/windfarm/pop/best_solutions_{seed}_{dmax}m.npy'):
                 logging.info(f"[!] Starting TensorCro: {seed}:{dmax}m...")
                 if SCBK:
-                    slack_callback = SlackCallback(SLACK_TOKEN, '#tensor-cro-dev', 'Alverciito',
-                                                   simulation_name=f'Wind Farm Problem (Scenario {dmax}m)')
+                    slack_callback = LightCallback(verbose=False)
                 else:
                     slack_callback = None
                 try:
                     best = t_cro.fit(fitness_function, directives, max_iter=50_000, device='/GPU:0', seed=seed,
-                                     shards=1_000, save=False, time_limit=TIME_LIMIT, tf_compile=False,
-                                     callback=slack_callback,
-                                     minimize=False)
+                                     shards=10_000, save=False, time_limit=TIME_LIMIT, tf_compile=True,
+                                     callback=slack_callback, minimize=False)
                     fitness_function.plot_solution(best[0], int(dmax), save=True,
-                                                   path=f'./optimization_tensorcro_{seed}.png')
+                                                   path=f'./results/windfarm/render/optimization_tensorcro_'
+                                                        f'{seed}_{dmax}.png')
                 except Exception as ex:
                     logging.error(f"[!] TensorCro failed.")
                     if slack_callback is not None:
@@ -221,8 +170,8 @@ def main() -> None:
                     raise ex
                 if slack_callback is not None:
                     slack_callback.end(best[0].numpy())
-                np.save(f'./results/windfarm/best_solutions_{seed}_{dmax}m.npy', best[0].numpy())
-                np.save(f'./results/windfarm/best_fitness_{seed}_{dmax}m.npy', best[1].numpy())
+                np.save(f'./results/windfarm/pop/best_solutions_{seed}_{dmax}m.npy', best[0].numpy())
+                np.save(f'./results/windfarm/fitness/best_fitness_{seed}_{dmax}m.npy', best[1].numpy())
                 logging.info(f'[!] Optimization finished. Best individual: {best}')
 
             # - Other algorithms:
