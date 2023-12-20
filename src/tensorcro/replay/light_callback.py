@@ -15,13 +15,15 @@ import matplotlib.pyplot as plt
 #                        MAIN CLASS                         #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class LightCallback:
-    def __init__(self, logger: logging.Logger = None, pile_callback=None, verbose=True):
+    def __init__(self, logger: logging.Logger = None, pile_callback=None, verbose=True, save_each=1_000, where='./'):
         """
         Light callback class. This class is used to provide a callback to the fit method to see the optimization
         progress.
         :param logger: Logger to use. If None, the default logger is used.
         :param pile_callback: A function to be called each shard.
         :param verbose: If True, the callback will print information.
+        :param save_each: Save the model each save_each shards.
+        :param where: Where to save the model.
         """
         self.current_shard = 0
         self.best_fitness = -np.inf
@@ -32,6 +34,8 @@ class LightCallback:
         # Set up upper level callback.
         self.upper_level_callback = pile_callback
         self.verbose = verbose
+        self.save_each = save_each
+        self.where = where
         if logger is None:
             self.logging = logging
         else:
@@ -44,18 +48,17 @@ class LightCallback:
         :return: True if the callback has been called correctly.
         """
         try:
-            self.end(self.last_best_pop, where='./')
+            self.end(self.last_best_pop)
             self.logging.error(f'[LightCallback] Model saved, exception: {exception}')
             return True
         except Exception as e:
             self.logging.error(f'[LightCallback] Model not saved {e},\n\nException raised: {exception}')
             return False
 
-    def end(self, best_solution: (np.ndarray, tf.Tensor) = None, where='./'):
+    def end(self, best_solution: (np.ndarray, tf.Tensor) = None):
         """
         This method is called when the fit method is finished.
         :param best_solution: Best solution found.
-        :param where: Where to save the solution.
         :return: True if the callback has been called correctly.
         """
         # Create fitness plot.
@@ -66,11 +69,17 @@ class LightCallback:
         plt.ylabel('Fitness')
         plt.grid(True)
         plt.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
-        plt.savefig(where + '/fitness.png')
+        plt.savefig(self.where + '/fitness.png')
         plt.close()
+
+        # Print information.
+        if self.verbose:
+            self.logging.info(f'[LightCallback] Shard 100.0000%, '
+                              f'best fitness: {self.best_fitness:.2f}')
+
         try:
             # Send message to slack.
-            np.save(where + '/solution.npy', best_solution)
+            np.save(self.where + '/solution.npy', best_solution)
             self.logging.info(f'[LightCallback] Model saved, best fitness: {self.best_fitness}')
             return True
         except Exception as e:
@@ -99,8 +108,13 @@ class LightCallback:
 
         # Print information.
         if self.verbose:
-            self.logging.info(f'[LightCallback] Shard {self.current_shard}/{max_shards}, '
-                              f'best fitness: {self.best_fitness:.2f}, ')
+            self.logging.info(f'[LightCallback] Shard {100 * self.current_shard / max_shards: .4f}%, '
+                              f'best fitness: {self.best_fitness:.2f}, current {best_fitness:.2f}')
+
+        # Save model.
+        if self.current_shard % self.save_each == 0:
+            np.save(self.where + '/backup.npy', self.last_best_pop)
+
         # Call upper level callback.
         if self.upper_level_callback is not None:
             self.upper_level_callback(*args, **kwargs)

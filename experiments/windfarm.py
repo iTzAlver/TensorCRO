@@ -137,7 +137,7 @@ def main() -> None:
         reef_shape = (nrows, nsubs * 2)
         pso = ParticleSwarmOptimization(directives, shape=(reef_shape[0], reef_shape[1] // nsubs))
         harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.2, bandwidth=0.27, directives=directives)
-        coordinate_descent = CoordinateDescent(directives, number_of_divs=35)
+        coordinate_descent = CoordinateDescent(directives, number_of_divs=20)
         genetic_algorithm = ComposedSubstrate(MultipointCrossover([directives.shape[-1] // 2]),
                                               Mutation('gaussian', mean=0.0, stddev=0.27),
                                               name='GeneticAlgorithm')
@@ -153,7 +153,7 @@ def main() -> None:
             if not os.path.exists(f'./results/windfarm/pop/best_solutions_{seed}_{dmax}m.npy'):
                 logging.info(f"[!] Starting TensorCro: {seed}:{dmax}m...")
                 if SCBK:
-                    slack_callback = LightCallback(verbose=False)
+                    slack_callback = LightCallback(verbose=True)
                 else:
                     slack_callback = None
                 try:
@@ -173,6 +173,31 @@ def main() -> None:
                 np.save(f'./results/windfarm/pop/best_solutions_{seed}_{dmax}m.npy', best[0].numpy())
                 np.save(f'./results/windfarm/fitness/best_fitness_{seed}_{dmax}m.npy', best[1].numpy())
                 logging.info(f'[!] Optimization finished. Best individual: {best}')
+
+        if not os.path.exists(f'./results/windfarm/pop/best_solutions_long_{dmax}m.npy'):
+            logging.info(f"[!] Starting TensorCro: Long run:{dmax}m...")
+            if SCBK:
+                slack_callback = LightCallback(verbose=True)
+            else:
+                slack_callback = None
+            try:
+                best = t_cro.fit(fitness_function, directives, max_iter=10_000_000, device='/GPU:0', seed=2000,
+                                 shards=1_000_000, save=False, time_limit=TIME_LIMIT, tf_compile=True,
+                                 callback=slack_callback, minimize=False)
+                fitness_function.plot_solution(best[0], int(dmax), save=True,
+                                               path=f'./results/windfarm/render/optimization_tensorcro_'
+                                                    f'long_{dmax}.png')
+            except Exception as ex:
+                logging.error(f"[!] TensorCro failed.")
+                if slack_callback is not None:
+                    slack_callback.exception_handler(ex)
+                raise ex
+
+            if slack_callback is not None:
+                slack_callback.end(best[0].numpy())
+            np.save(f'./results/windfarm/pop/best_solutions_long_{dmax}m.npy', best[0].numpy())
+            np.save(f'./results/windfarm/fitness/best_fitness_long_{dmax}m.npy', best[1].numpy())
+            logging.info(f'[!] Optimization finished. Best individual: {best}')
 
             # - Other algorithms:
             # for algorithm in ALGORITHMS:
