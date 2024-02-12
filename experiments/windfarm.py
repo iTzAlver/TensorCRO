@@ -9,6 +9,7 @@ import logging
 import os
 import tensorflow as tf
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from other_algorithms import GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm, SimulatedAnnealingAlgorithm
 from tensorcro import TensorCro, MultipointCrossover, ParticleSwarmOptimization, HarmonySearch, SimulatedAnnealing, \
@@ -17,8 +18,8 @@ from windfarm_problem import (fitness_tf, TurbineParameters, WindParameters)
 logging.basicConfig(level=logging.INFO)
 # SLACK_TOKEN = 'xoxb-5951328403522-6081308292118-YvKWkLfSrLGMtEBskZ6ycbWE'
 ALGORITHMS = [GeneticAlgorithm, PSOAlgorithm, HarmonySearchAlgorithm, SimulatedAnnealingAlgorithm]
-TIME_LIMIT = None
-SCBK = True
+TIME_LIMIT = 60 * 60
+SCBK = False
 SEEDS = [2023 + i for i in range(10)]
 
 
@@ -26,13 +27,14 @@ SEEDS = [2023 + i for i in range(10)]
 #                        FUNCTION DEF                       #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 class Fitness:
-    def __init__(self, dmin: float = TurbineParameters.min_dist):
+    def __init__(self, dmin: float = TurbineParameters.min_dist, reverse=False):
         """
         Fitness function for the wind farm problem.
         :param dmin: Minimum distance between turbines.
         """
         self.dmin = tf.constant(dmin, dtype=tf.float32)
         self.fitness_tf = fitness_tf
+        self.reverse = 1 if not reverse else -1
 
     def plot_solution(self, individual: (tf.Tensor, np.array), diam: int, save: bool = False,
                       path: str = './optimization.png') -> None:
@@ -50,6 +52,7 @@ class Fitness:
         else:
             cartesian_coords = self.polar_to_cartesian(individual).numpy()
         cartesian_coords = cartesian_coords[0].T
+
         # We plot the solution:
         plt.figure(figsize=(10, 10))
         plt.scatter(cartesian_coords[:, 0], cartesian_coords[:, 1], s=100, c='r', marker='x')
@@ -90,8 +93,13 @@ class Fitness:
         return tf.stack([x, y], axis=1)
 
     def __call__(self, *args, **kwargs):
+        # Store input type:
+        if isinstance(args[0], np.ndarray):
+            input_type = np.ndarray
+        else:
+            input_type = tf.Tensor
         # Transform polar coordinates to cartesian:
-        cartesian_pop = self.polar_to_cartesian(args[0])
+        cartesian_pop = tf.cast(self.polar_to_cartesian(args[0]), tf.float32)
         # [1] Compute penalty if there are turbines too close:
         # Expand dimensions to make broadcasting work
         cartesian_array_expanded_1 = tf.expand_dims(cartesian_pop, axis=-1)
@@ -109,7 +117,11 @@ class Fitness:
         # [2] We calculate the fitness value:
         windfram_power = self.fitness_tf(tf.convert_to_tensor(cartesian_pop, dtype_hint=tf.float32))
         total_power = tf.reduce_sum(windfram_power, axis=-1)
-        return total_power - penalty
+        if input_type == np.ndarray:
+            retval = (total_power - penalty).numpy() * self.reverse
+        else:
+            retval = (total_power - penalty) * self.reverse
+        return retval
 
 
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
@@ -222,11 +234,144 @@ def main() -> None:
         logging.info("[-] Disconnected from Wind Farm Problem.")
 
 
+def timed_main():
+    """
+    Run all algorithms and experiments 1h.
+    :return:
+    """
+    logging.info("[+] Connected to Wind Farm Problem.")
+    dmin = TurbineParameters.min_dist
+
+    for seed in SEEDS:
+        for dmax, nturb in zip(WindParameters.park_diam, [16, 36, 64]):
+            # [!] Set up TensorCro:
+            # - Main parameters:
+            fitness_function = Fitness(dmin)
+            logging.info(f"[!] Fitness built successfully. Setting up TensorCro...")
+            first_half = [dmax] * nturb
+            second_half = [2 * np.pi] * nturb
+            concatenated_max = np.concatenate([first_half, second_half])
+            concatenated_min = np.array([0] * (2 * nturb))
+            directives = tf.convert_to_tensor([concatenated_min, concatenated_max], dtype_hint=tf.float32)
+
+            # - Substrates:
+            nsubs = 5
+            nrows = 200 // (2 * nsubs)
+            reef_shape = (nrows, nsubs * 2)
+            pso = ParticleSwarmOptimization(directives, shape=(reef_shape[0], reef_shape[1] // nsubs))
+            harmony_search = HarmonySearch(hmc_r=0.8, pa_r=0.2, bandwidth=0.27, directives=directives)
+            coordinate_descent = CoordinateDescent(directives, number_of_divs=20)
+            genetic_algorithm = ComposedSubstrate(MultipointCrossover([directives.shape[-1] // 2]),
+                                                  Mutation('gaussian', mean=0.0, stddev=0.27),
+                                                  name='GeneticAlgorithm')
+            simulated_annealing = SimulatedAnnealing(directives, shape=(reef_shape[0], reef_shape[1] // nsubs))
+            subs = [pso, harmony_search, genetic_algorithm, simulated_annealing, coordinate_descent]
+
+            # - TensorCro:
+            t_cro = TensorCro(reef_shape, subs=subs)
+
+            # - Fit:
+            logging.info(f"\n[!] TensorCro built successfully. Starting optimization...")
+
+            if not os.path.exists(f'./results/windfarm1h/pop/best_1h_TensorCRO_{seed}_{dmax}m.npy'):
+                logging.info(f"[!] Starting TensorCro: {seed}:{dmax}m...")
+                if SCBK:
+                    slack_callback = LightCallback(verbose=True)
+                else:
+                    slack_callback = None
+                try:
+                    best = t_cro.fit(fitness_function, directives, max_iter=500_000, device='/GPU:0', seed=seed,
+                                     shards=100_000, save=False, time_limit=TIME_LIMIT, tf_compile=True,
+                                     callback=slack_callback, minimize=False)
+                    fitness_function.plot_solution(best[0], int(dmax), save=True,
+                                                   path=f'./results/windfarm1h/render/optimization_tensorcro_1h_'
+                                                        f'{seed}_{dmax}.png')
+                except Exception as ex:
+                    logging.error(f"[!] TensorCro failed.")
+                    if slack_callback is not None:
+                        slack_callback.exception_handler(ex)
+                    raise ex
+                if slack_callback is not None:
+                    slack_callback.end(best[0].numpy())
+                np.save(f'./results/windfarm1h/pop/best_1h_TensorCRO_{seed}_{dmax}m.npy', best[0].numpy())
+                np.save(f'./results/windfarm1h/fitness/best_fitness_1h_TensorCRO_{seed}_{dmax}m.npy', best[1].numpy())
+                logging.info(f'[!] Optimization finished. Best individual: {best}')
+
+            # - Other algorithms:
+            for algorithm in ALGORITHMS:
+                if not os.path.exists(f'./results/windfarm1h/pop/best_1h_{algorithm.__name__}_{seed}_{dmax}m.npy'):
+                    logging.info(f"[!] Starting {algorithm.__name__}: {seed}:{dmax}m...")
+                    try:
+                        fitness_function = Fitness(dmin, reverse=True)
+                        if algorithm is not SimulatedAnnealingAlgorithm:
+                            ai = algorithm(200)
+                        else:
+                            ai = algorithm()
+                        # We run the algorithm:
+                        best_ind, best_fit = ai.fit(fitness_function, directives.numpy(), int(1e10),
+                                                    time_limit=TIME_LIMIT, seed=seed, verbose=True)
+                        if isinstance(best_ind, tf.Tensor):
+                            best_ind = best_ind.numpy()
+                            best_fit = best_fit.numpy()
+                        else:
+                            best_ind = np.array(best_ind)
+                            best_fit = np.array(best_fit)
+                        np.save(f'./results/windfarm1h/pop/best_1h_{algorithm.__name__}_{seed}_{dmax}m.npy',
+                                best_ind)
+                        np.save(f'./results/windfarm1h/fitness/best_fitness_1h_{algorithm.__name__}_{seed}_{dmax}m.npy',
+                                best_fit)
+                        fitness_function.plot_solution(best_ind[0], dmax, save=True,
+                                                       path=f'./results/windfarm1h/render/'
+                                                            f'optimization_1h_{algorithm.__name__}_{seed}.png')
+                        logging.info(f'[!] Optimization finished. Best fitness: {best_fit}')
+                    except Exception as ex:
+                        logging.error(f"[!] {algorithm.__name__} failed: {ex}")
+        logging.info("[-] Disconnected from Wind Farm Problem.")
+
+
+def read():
+    _lsta = os.listdir('./experiments/')
+    lsta = list()
+    for _ in _lsta:
+        if 'fitness_1h' in _:
+            lsta.append(_)
+    del _lsta
+    _lsta2 = os.listdir('./experiments/results/windfarm/fitness')
+    lsta2 = list()
+    for _ in _lsta2:
+        if 'fitness_1h' in _:
+            lsta2.append(_)
+    del _lsta2
+    results = {'alg': list(), 'seed': list(), 'best': list(), 'scenario': list()}
+    for end_path in lsta:
+        path = './experiments/' + end_path
+        best = np.max(np.load(path))
+        name = end_path.split('_')[3]
+        seed = end_path.split('_')[4]
+        scen = end_path.split('_')[5][:5]
+        results['alg'].append(name)
+        results['seed'].append(seed)
+        results['best'].append(best)
+        results['scenario'].append(scen)
+    for end_path in lsta2:
+        path = './experiments/results/windfarm/fitness/' + end_path
+        best = np.max(np.load(path))
+        name = 'TensorCRO'
+        seed = end_path.split('_')[3]
+        scen = end_path.split('_')[4][:5]
+        results['alg'].append(name)
+        results['seed'].append(seed)
+        results['best'].append(best)
+        results['scenario'].append(scen)
+    rdf = pd.DataFrame(results)
+    maxs = rdf.groupby(['alg', 'scenario']).max()
+
+
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                           MAIN                            #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 if __name__ == '__main__':
-    main()
+    timed_main()
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 #                        END OF FILE                        #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #

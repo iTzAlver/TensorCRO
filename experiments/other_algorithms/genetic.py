@@ -5,6 +5,7 @@
 #                                                           #
 # - x - x - x - x - x - x - x - x - x - x - x - x - x - x - #
 # Import statements:
+import logging
 import time
 import numpy as np
 
@@ -124,20 +125,23 @@ class GeneticAlgorithm:
         individuals = self.__initialization(bounds)
         # Evaluate the fitness of the individuals:
         fitness_values = -fitness_function(individuals)
+        if not isinstance(fitness_values, np.ndarray):
+            fitness_values = np.array(fitness_values)
         # Main loop:
         for iterations in range(max_iterations):
             # Perform the crossover operation:
             children = self.__crossover(individuals)
             # Perform the mutation operation:
             children = self.__mutation(children, bounds)
+            # Clip the children to the bounds:
+            children = self.__clip(children, bounds)
             # Evaluate the fitness of the children:
             fitness_children = -fitness_function(children)
             # Perform the selection operation:
             individuals, fitness_values = self.__selection(individuals, children, fitness_values, fitness_children)
             # Print the results:
             if verbose:
-                print(f"GA: Iteration: {iterations:3d} | Best fitness: {-fitness_values[0]:.3f} "
-                      f"| Best individual: {individuals[0]}")
+                logging.info(f"GA: Iteration: {iterations:3d} | Best fitness: {-fitness_values[0]:.3f}")
             # Check the time limit:
             if time_limit:
                 if time.perf_counter() - tik > time_limit:
