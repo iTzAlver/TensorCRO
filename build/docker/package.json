@@ -1,0 +1,49 @@
+{
+  "name": "tensorcro_sim_example",
+  "parameters":
+  {
+    "reef_shape": [10, 10],
+    "rho": 0.4,
+    "fb": 0.80,
+    "fd": 0.50,
+    "pd": 0.20,
+    "fa": 0.15,
+    "k": 3
+  },
+
+  "dims":
+  [
+    {
+      "size": 100,
+      "min": -1,
+      "max": 1
+    },
+    {
+      "size": 7,
+      "min": 0,
+      "max": 256
+    }
+  ],
+
+  "substrates": [
+    {
+      "substrate_name": "ParticleSwarmOptimization",
+      "inertia": 0.5,
+      "cognition": 1.0,
+      "social": 1.0
+    },
+    {
+      "substrate_name": "CoordinateDescent",
+      "number_of_divs": 20
+    }
+  ],
+
+  "fit": {
+    "seed": null,
+    "iterations": 100,
+    "shards": 10,
+    "time_limit": null,
+    "compile": false,
+    "minimize": false
+  }
+}
