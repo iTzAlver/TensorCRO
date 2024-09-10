@@ -156,10 +156,17 @@ of the repository.
 If you use this code, please cite the following paper:
 
 ```bibtex
-@inproceedings{palomo2023tensorcro,
-  title={TensorCRO: A Tensorflow-based implementation of the Coral Reef Optimization algorithm},
-  author={Palomo-Alonso, A and García, V and Salcedo-Sanz, S},
-  journal={arXiv preprint arXiv:X.Y},
-  year={2023}
+@article{https://doi.org/10.1111/exsy.13713,
+author = {Palomo-Alonso, A. and Costa, V. G. and Moreno-Saavedra, L. M. and Lorente-Ramos, E. and Pérez-Aracil, J. and Pedreira, C. E. and Salcedo-Sanz, S.},
+title = {TensorCRO: A TensorFlow-based implementation of a multi-method ensemble for optimization},
+journal = {Expert Systems},
+volume = {n/a},
+number = {n/a},
+pages = {e13713},
+keywords = {GPU, meta-heuristics, multi-method ensembles, optimization, TensorFlow},
+doi = {https://doi.org/10.1111/exsy.13713},
+url = {https://onlinelibrary.wiley.com/doi/abs/10.1111/exsy.13713},
+eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1111/exsy.13713}
 }
+
 ```
